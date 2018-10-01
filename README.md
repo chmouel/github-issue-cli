@@ -23,8 +23,11 @@ Basic usage :
 % github-issue-cli org/repo
 ```
 
-This is will open vim where the first line would be the title and the third line
-will be the body of the issue. (gitcommit style and uses the same filetype mode).
+This is will open your editor (whatever you specified in $EDITOR or vim if not)
+where the first line would be the title and the third line will be the body of
+the issue, it will be setup as markdown mode, so you can have all the nice thing
+of the mode with your editor. Note that the first line is the title and it start
+from the third line.
 
 You can add labels in there separated by comma like so :
 

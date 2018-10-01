@@ -66,8 +66,14 @@ def main(args):
 
     template_processed = DEFAULT_TEMPLATE.format(**locals())
     open(TMPFILE, "w").write(template_processed)
-    if not args.novim:
-        subprocess.call(["vim", TMPFILE])
+    if not args.noeditor:
+        if args.editor:
+            editor = args.editor
+        elif 'EDITOR' in os.environ:
+            editor = os.environ['EDITOR']
+        else:
+            editor = 'vim'
+        subprocess.call([editor, TMPFILE])
 
     blob = open(TMPFILE, 'r').readlines()
     for x in blob:
@@ -149,8 +155,10 @@ if __name__ == '__main__':
                         help="Github Repository where to create the issue")
     parser.add_argument("--me", action="store_true",
                         help="Assign the issue to yourself.")
-    parser.add_argument("-n", "--novim", action="store_true",
-                        help="Don't start VIM")
+    parser.add_argument("--editor", action="store_true",
+                        help="Editor to use default to $EDITOR or vim.")
+    parser.add_argument("-n", "--noeditor", action="store_true",
+                        help="Don't start the editor")
 
     args = parser.parse_args()
     main(args)
