@@ -54,7 +54,7 @@ github-issue-cli -a user1 -a user2 -l label1 -l label2 chmouel/space3
 This will show when editing in the template tags,
 
 One niceties is with the `-b` option which allows you to set the body, you can
-feed a file name into it when prefixing character, for example :
+feed a file name into it when prefixing the `@` character, for example :
 
 ```
 github-issue-cli -b@/tmp/commit_message chmouel/space3
