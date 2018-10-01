@@ -20,7 +20,7 @@ Usage
 
 Basic usage :
 ```
-% github-issue-cli chmouel/space3
+% github-issue-cli org/repo
 ```
 
 This is will open vim where the first line would be the title and the third line
@@ -48,7 +48,7 @@ options like `label` and `assignee` can be specified multiple time on the
 command line, i.e:
 
 ```
-github-issue-cli -a user1 -a user2 -l label1 -l label2 chmouel/space3
+% github-issue-cli -a user1 -a user2 -l label1 -l label2 org/repo
 ```
 
 This will show when editing in the template tags,
@@ -57,7 +57,7 @@ One niceties is with the `-b` option which allows you to set the body, you can
 feed a file name into it when prefixing the `@` character, for example :
 
 ```
-github-issue-cli -b@/tmp/commit_message chmouel/space3
+% github-issue-cli -b@/tmp/commit_message org/repo
 ```
 
 will insert /tmp/commit_message as the body of your commit message.
@@ -66,7 +66,7 @@ See `--help` for more options.
 
 AUTHORS
 =======
-Chmouel Boudjnah <chmouel@chmouel.com>
+Chmouel Boudjnah -- <chmouel@chmouel.com>
 
 LICENSE
 =======
