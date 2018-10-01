@@ -12,9 +12,8 @@ Installation
 * Install PyGithub
   `pip3 install pygithub`
 * Copy script somewhere in your path.
-* Set your oauth.token in your gitconfig to your personal token, this should be
-  setup by default by [hub](https://github.com/defunkt/hub)
-
+* Set your `oauth.token` in the `github` in your gitconfig to your personal token, this should be
+  setup by default by [hub](https://github.com/defunkt/hub) with easy.
 
 Usage
 =====
