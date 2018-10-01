@@ -21,7 +21,7 @@ import sys
 import subprocess
 import tempfile
 
-DEFAULT_TEMPLATE = """{args.title}
+DEFAULT_TEMPLATE = """{title}
 
 {body}
 
@@ -30,6 +30,8 @@ DEFAULT_TEMPLATE = """{args.title}
 # vim: ft=gitcommit
 """
 
+DEFAULT_BODY = "Insert body here."
+DEFAULT_TITLE = "Insert title here."
 TMPFILE = tempfile.mktemp("github-new-issue.py.XXXXXX")
 atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 
@@ -37,16 +39,16 @@ atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 def main(args):
     labels = args.label or []
     labels_flat = ", ".join(labels)
-    body = args.body
+    body = args.body or DEFAULT_BODY
+    title = args.title or DEFAULT_TITLE
     assignee = []
     assignee_flat = ""
-
     if args.me:
         assignee_flat = "me"
     elif args.assign:
         assignee_flat = ", ".join(args.assign)
 
-    if body and not args.title:
+    if body and not title:
         print("Can't specify a body without a title")
         exit(1)
 
@@ -56,7 +58,8 @@ def main(args):
             sys.exit(1)
         body = open(body[1:]).read().strip()
 
-    open(TMPFILE, "w").write(DEFAULT_TEMPLATE.format(**locals()))
+    template_processed = DEFAULT_TEMPLATE.format(**locals())
+    open(TMPFILE, "w").write(template_processed)
     if not args.novim:
         subprocess.call(["vim", TMPFILE])
 
@@ -73,7 +76,7 @@ def main(args):
             if line == '':
                 break
             assignee = line.split(",")
-    blob = [x.strip() for x in blob if not x.startswith("#")]
+    blob = [x.strip() for x in blob if x.strip() and not x.startswith("#")]
 
     if len(blob) == 0:
         print("No title defined")
@@ -82,11 +85,20 @@ def main(args):
     while not blob[-1]:
         del blob[-1]
     title = blob[0]
-    body = " ".join(blob[2:])
+    body = " ".join(blob[1:])
+
     token = subprocess.Popen(
         ["git", "config", "--get", "github.oauth-token"],
         stdout=subprocess.PIPE
     ).communicate()[0].strip().decode()
+
+    if title == DEFAULT_TITLE:
+        print("We still have the default title, exiting.")
+        sys.exit(1)
+
+    if body == DEFAULT_BODY:
+        print("We still have the default body, exiting.")
+        sys.exit(1)
 
     g = gh.Github(token)
     repo = g.get_repo(args.repo)
