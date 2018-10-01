@@ -1,11 +1,11 @@
-github-issue-cli
+Github Issue CLI
 ================
 
 Simple CLI to create issues on the Command Line,
 
 Created it because I could not find any that was doign the job the way I wanted,
 
-INSTALLATION
+Installation
 ============
 
 * Install Python3
@@ -16,7 +16,7 @@ INSTALLATION
   setup by default by [hub](https://github.com/defunkt/hub)
 
 
-USAGE
+Usage
 =====
 
 Basic usage :
@@ -61,7 +61,9 @@ feed a file name into it when prefixing character, for example :
 github-issue-cli -b@/tmp/commit_message chmouel/space3
 ```
 
-will insert commit_message
+will insert /tmp/commit_message as the body of your commit message.
+
+See `--help` for more options.
 
 AUTHORS
 =======
