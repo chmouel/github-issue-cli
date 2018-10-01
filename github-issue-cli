@@ -27,7 +27,13 @@ DEFAULT_TEMPLATE = """{title}
 
 # Labels: {labels_flat}
 # Assignee: {assignee_flat}
-# vim: ft=gitcommit
+#
+# Editors configs:
+#
+# vim: ft=markdown
+# Local Variables:
+# mode: markdown
+# End:
 """
 
 DEFAULT_BODY = "Insert body here."
@@ -76,16 +82,15 @@ def main(args):
             if line == '':
                 break
             assignee = line.split(",")
-    blob = [x.strip() for x in blob if x.strip() and not x.startswith("#")]
-
+    blob = [x.strip() for x in blob if not x.startswith("#")]
     if len(blob) == 0:
         print("No title defined")
         sys.exit(1)
 
-    while not blob[-1]:
+    while not blob[-1] or blob[-1] == '':
         del blob[-1]
     title = blob[0]
-    body = " ".join(blob[1:])
+    body = "\n".join(blob[1:])
 
     token = subprocess.Popen(
         ["git", "config", "--get", "github.oauth-token"],
