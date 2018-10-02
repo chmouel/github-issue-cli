@@ -25,10 +25,14 @@ DEFAULT_TEMPLATE = """{title}
 
 {body}
 
+# Everything starting with a # at the beginning of the line will be ignored.
+#
+# Tags: commas delimited
+#
 # Labels: {labels_flat}
 # Assignee: {assignee_flat}
 #
-# Editors configs:
+# Editors configs (you can ignore):
 #
 # vim: ft=markdown
 # Local Variables:
@@ -98,10 +102,17 @@ def main(args):
     title = blob[0]
     body = "\n".join(blob[1:])
 
-    token = subprocess.Popen(
-        ["git", "config", "--get", "github.oauth-token"],
-        stdout=subprocess.PIPE
-    ).communicate()[0].strip().decode()
+    if args.token:
+        token = args.token
+    else:
+        token = subprocess.Popen(
+            ["git", "config", "--get", "github.oauth-token"],
+            stdout=subprocess.PIPE
+        ).communicate()[0].strip().decode()
+
+    if not token:
+        print("Cannot find a github token")
+        sys.exit(1)
 
     if title == DEFAULT_TITLE:
         print("We still have the default title, exiting.")
@@ -151,12 +162,20 @@ if __name__ == '__main__':
                         help="Body of the issue, if you specify a @ at first "
                              "it will include the file following")
 
+    parser.add_argument("--token", type=str,
+                        default=os.environ.get("GITHUB_TOKEN"),
+                        help="GitHub Oauth Token. It will try the GITHUB_TOKEN"
+                        " env or from `git config --get github.oauth-token`")
+
     parser.add_argument("repo",
                         help="Github Repository where to create the issue")
+
     parser.add_argument("--me", action="store_true",
                         help="Assign the issue to yourself.")
+
     parser.add_argument("--editor", action="store_true",
                         help="Editor to use default to $EDITOR or vim.")
+
     parser.add_argument("-n", "--noeditor", action="store_true",
                         help="Don't start the editor")
 

@@ -25,9 +25,11 @@ Basic usage :
 
 This is will open your editor (whatever you specified in $EDITOR or vim if not)
 where the first line would be the title and the third line will be the body of
-the issue, it will be setup as markdown mode, so you can have all the nice thing
-of the mode with your editor. Note that the first line is the title and it start
-from the third line.
+the issue.
+
+If you are in vim or emacs the buffer/file will be setup with the markdown
+mode. Note that the first line is the title and it start from the third line.
+Every lines that starts with a # will be ignored
 
 You can add labels in there separated by comma like so :
 
@@ -64,6 +66,16 @@ feed a file name into it when prefixing the `@` character, for example :
 ```
 
 will insert /tmp/commit_message as the body of your commit message.
+
+Tokens are get from the gitconfig section github variable oauth-token, for example like this :
+
+```ini
+[github]
+	user = me
+	oauth-token = token
+```
+
+you can override this with the `--token` option or with the `GITHUB_TOKEN` environment variable.
 
 See `--help` for more options.
 
