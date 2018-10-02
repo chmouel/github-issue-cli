@@ -29,7 +29,7 @@ the issue.
 
 If you are in vim or emacs the buffer/file will be setup with the markdown
 mode. Note that the first line is the title and it start from the third line.
-Every lines that starts with a # will be ignored
+Every lines that starts with a # and a space will be ignored
 
 You can add labels in there separated by comma like so :
 

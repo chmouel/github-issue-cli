@@ -92,7 +92,7 @@ def main(args):
             if line == '':
                 break
             assignee = line.split(",")
-    blob = [x.strip() for x in blob if not x.startswith("#")]
+    blob = [x.strip() for x in blob if not x.startswith("# ")]
     if len(blob) == 0:
         print("No title defined")
         sys.exit(1)
