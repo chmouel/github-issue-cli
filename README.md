@@ -19,7 +19,8 @@ Usage
 =====
 
 Basic usage :
-```
+
+```bash
 % github-issue-cli org/repo
 ```
 
@@ -52,7 +53,7 @@ There is various command line switch to override those, where some of the
 options like `label` and `assignee` can be specified multiple time on the
 command line, i.e:
 
-```
+```bash
 % github-issue-cli -a user1 -a user2 -l label1 -l label2 org/repo
 ```
 
@@ -61,7 +62,7 @@ This will show when editing in the template tags,
 One niceties is with the `-b` option which allows you to set the body, you can
 feed a file name into it when prefixing the `@` character, for example :
 
-```
+```bash
 % github-issue-cli -b@/tmp/commit_message org/repo
 ```
 
