@@ -107,8 +107,12 @@ def main(args):
         column_id_of_backlog,
         args.issuepr
     )
-    from pprint import pprint as p
-    p(d)
+
+    print("%s has been moved to organisation %s for %s board in %s column" %
+          (args.issuepr,
+           args.organisation,
+           args.board,
+           args.column))
 
 
 if __name__ == '__main__':
