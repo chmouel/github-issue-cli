@@ -24,7 +24,7 @@ Basic usage :
 % github-issue-cli org/repo
 ```
 
-This is will open your editor (whatever you specified in $EDITOR or vim if not)
+This is will open your editor (whatever you specified in **$EDITOR** or vim if not)
 where the first line would be the title and the third line will be the body of
 the issue.
 
@@ -79,6 +79,10 @@ Tokens are get from the gitconfig section github variable oauth-token, for examp
 you can override this with the `--token` option or with the `GITHUB_TOKEN` environment variable.
 
 See `--help` for more options.
+
+SEE ALSO
+========
+hub issue -- https://hub.github.com/hub-issue.1.html
 
 AUTHORS
 =======
