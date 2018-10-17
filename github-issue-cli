@@ -26,14 +26,14 @@ DEFAULT_TEMPLATE = """{title}
 {body}
 
 # Everything starting with a # at the beginning of the line will be ignored.
-#
+# -
 # Tags: commas delimited
-#
+# -
 # Labels: {labels_flat}
 # Assignee: {assignee_flat}
-#
+# -
 # Editors configs (you can ignore):
-#
+# -
 # vim: ft=markdown
 # Local Variables:
 # mode: markdown
@@ -77,7 +77,7 @@ def main(args):
             editor = os.environ['EDITOR']
         else:
             editor = 'vim'
-        subprocess.call([editor, TMPFILE])
+        subprocess.call([editor, TMPFILE], stdout=sys.stderr.buffer)
 
     blob = open(TMPFILE, 'r').readlines()
     for x in blob:
