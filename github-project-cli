@@ -45,7 +45,7 @@ class GH(object):
     def get_project_by_desc(self, org, desc):
         h, d = self.get_projects_org(org)
         for l in d:
-            if l['body'] == desc:
+            if l['body'].lower() == desc.lower():
                 return l
 
     def get_columns_projectid(self, project_id):
@@ -58,8 +58,9 @@ class GH(object):
 
     def get_cards_board_project(self, project_id, name):
         h, d = self.get_columns_projectid(project_id)
+
         for l in d:
-            if l['name'] == name:
+            if l['name'].lower() == name.lower():
                 return l
 
     def list_card_column(self, column_id):
@@ -102,7 +103,9 @@ def main(args):
     project = g.get_project_by_desc(args.organisation,
                                     args.board)
     column_id_of_backlog = g.get_cards_board_project(
-        project['id'], args.column)['id']
+        project['id'], args.column)
+
+    column_id_of_backlog = column_id_of_backlog['id']
     h, d = g.add_to_card_to_column(
         column_id_of_backlog,
         args.issuepr
