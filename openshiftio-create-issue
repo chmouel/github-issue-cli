@@ -2,13 +2,13 @@
 set -e
 
 SED=sed
+ORGANISATION="fabric8io"
 BACKLOG_COLUMN="Backlog"
 BACKLOG="Build Team Kanban Board"
 LABEL=bug
 OPENSHIFTIO_REPO_ISSUE=openshiftio/openshift.io
 
 type -p gsed 2>/dev/null >/dev/null && SED=gsed
-assignme="--me"
 
 function green() { msg="$@";echo "\e[40;38;5;82m${msg}\e[0m" ;}
 function red() { msg="$@";echo "\e[40;91;5;82m${msg}\e[0m" ;}
@@ -16,22 +16,29 @@ function yellow() { msg="$@";echo "\e[40;91;5;93m${msg}\e[0m" ;}
 function cyan() { msg="$@";echo "\e[40;91;5;96m${msg}\e[0m" ;}
 
 function help() {
-    echo "-l=LABEL -i[in progress] -n[no_assignme] -j[justopenshiftio]"
+    echo "-l=LABEL -i[in progress] -m[assignme] -j[justopenshiftio] -ttest"
 }
 
-while getopts ":l:inj" opt; do
+while getopts ":l:imjt" opt; do
     case $opt in
+        t)
+            test="yes"
+            OPENSHIFTIO_REPO_ISSUE="chmouel/space2"
+            REPO="chmouel/space3"
+            ;;
         j)
             justopenshiftio=yes
             REPO=${OPENSHIFTIO_REPO_ISSUE}
             ;;
-        n)
-            assignme=""
+        m)
+            assignme="--me"
             ;;
         l)
             LABEL=${OPTARG}
             ;;
         i)
+            assignme="--me"
+            osioinprogress="-l sprint/current"
             BACKLOG_COLUMN="In progress"
             ;;
         \?)
@@ -77,7 +84,7 @@ tempf=$(mktemp) || exit
 trap "rm -f -- $tempf" EXIT
 
 if [[ ${justopenshiftio} ]];then
-    LABELS="-l area/pipelines -l sprint/current -l team/build-cd -l ${osiolabel}"
+    LABELS="-l area/pipelines -l team/build-cd -l ${osiolabel} ${osioinprogress}"
 else
     LABELS="-l ${LABEL}"
 fi
@@ -91,17 +98,21 @@ else
     ${SED} -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
     OPENSHIFTIO_URL=$(github-issue-cli \
                       -n --input-file ${tempf} \
+                      ${osioinprogress} \
                       -l area/pipelines -l team/build-cd -l ${osiolabel} \
                       ${assignme} ${OPENSHIFTIO_REPO_ISSUE})
 fi
 
-if type -p colout >/dev/null 2>/dev/null;then
-    github-project-cli -o fabric8io -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}"|colout '(https://\S*).*on (https://\S*).*in "([^"]+)" column' yellow,blue,red
-else
-    github-project-cli -o fabric8io -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}"
-fi
 
-echo
+# TODO: can't do on an non org yet so avoiding it for now
+if [[ -z ${test} ]];then
+    github-project-cli -o ${ORGANISATION} -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}" >${tempf}
+    if type -p colout >/dev/null 2>/dev/null;then
+        cat ${tempf}|colout '(https://\S*).*on (https://\S*).*in "([^"]+)" column' yellow,blue,red
+    fi
+
+    echo
+fi
 
 echo -e "$(red OpenShiftIO URL): ${OPENSHIFTIO_URL}"
 [[ -z ${justopenshiftio} ]] && echo -e "$(red ${labelp} URL): ${REPO_URL}"
