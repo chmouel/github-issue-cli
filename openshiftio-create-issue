@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+SED=sed
 BACKLOG_COLUMN="Backlog"
 BACKLOG="Build Team Kanban Board"
 LABEL=bug
 OPENSHIFTIO_REPO_ISSUE=openshiftio/openshift.io
 
+type -p gsed 2>/dev/null >/dev/null && SED=gsed
 assignme="--me"
 
 function green() { msg="$@";echo "\e[40;38;5;82m${msg}\e[0m" ;}
@@ -67,9 +69,9 @@ echo
 
 read -n 1 -p "Are you OK with these?: " REPLY
 [[ ${REPLY,,} != y ]] && exit
-echo
 
-set -x
+echo
+echo
 
 tempf=$(mktemp) || exit
 trap "rm -f -- $tempf" EXIT
@@ -85,19 +87,21 @@ REPO_URL=$(github-issue-cli ${assignme} --output-file ${tempf} ${LABELS} ${REPO}
 if [[ -n ${justopenshiftio} ]];then
     OPENSHIFTIO_URL=${REPO_URL}
 else
-    labelp=$(basename ${REPO_URL}|gsed -e 's/-/ /g' -e 's/[^ _-]*/\u&/g')
-    gsed -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
+    labelp=$(basename ${REPO}|${SED} -e 's/-/ /g' -e 's/[^ _-]*/\u&/g')
+    ${SED} -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
     OPENSHIFTIO_URL=$(github-issue-cli \
                       -n --input-file ${tempf} \
                       -l area/pipelines -l sprint/current -l team/build-cd \
                       -l ${osiolabel} ${assignme} ${OPENSHIFTIO_REPO_ISSUE})
 fi
 
-github-project-cli -o fabric8io -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}"
+if type -p colout >/dev/null 2>/dev/null;then
+    github-project-cli -o fabric8io -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}"|colout '(https://\S*).*on (https://\S*).*in "([^"]+)" column' yellow,blue,red
+else
+    github-project-cli -o fabric8io -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}"
+fi
 
 echo
 
-set +x
-
 echo -e "$(red OpenShiftIO URL): ${OPENSHIFTIO_URL}"
-[[ -z ${justopenshiftio} ]] && echo "$(red ${labelp} URL): ${REPO_URL}"
+[[ -z ${justopenshiftio} ]] && echo -e "$(red ${labelp} URL): ${REPO_URL}"
