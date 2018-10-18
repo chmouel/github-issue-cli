@@ -1,4 +1,4 @@
-*that there is other scripts in this repo you may or may not be interested with, only GitHub Issue CLI is generic enough to use*
+*Note: there is other scripts in this repo you may or may not be interested with, only GitHub Issue CLI is generic enough to use*
 
 Github Issue CLI
 ================
