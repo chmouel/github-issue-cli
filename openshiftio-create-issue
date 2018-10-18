@@ -91,8 +91,8 @@ else
     ${SED} -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
     OPENSHIFTIO_URL=$(github-issue-cli \
                       -n --input-file ${tempf} \
-                      -l area/pipelines -l sprint/current -l team/build-cd \
-                      -l ${osiolabel} ${assignme} ${OPENSHIFTIO_REPO_ISSUE})
+                      -l area/pipelines -l team/build-cd -l ${osiolabel} \
+                      ${assignme} ${OPENSHIFTIO_REPO_ISSUE})
 fi
 
 if type -p colout >/dev/null 2>/dev/null;then
