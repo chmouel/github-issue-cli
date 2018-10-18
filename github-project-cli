@@ -111,10 +111,9 @@ def main(args):
         args.issuepr
     )
 
-    print("%s has been moved to organisation %s for %s board in %s column" %
+    print("%s has been moved on %s in \"%s\" column" %
           (args.issuepr,
-           args.organisation,
-           args.board,
+           project['html_url'],
            args.column))
 
 
