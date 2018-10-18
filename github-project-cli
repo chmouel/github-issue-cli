@@ -13,6 +13,10 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+#
+# WIP: we mostly only able to create a card in a column for now, will improve on
+# the go.
+#
 import argparse
 import github as gh
 import os
