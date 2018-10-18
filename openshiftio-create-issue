@@ -4,6 +4,7 @@ set -e
 BACKLOG_COLUMN="Backlog"
 BACKLOG="Build Team Kanban Board"
 LABEL=bug
+OPENSHIFTIO_REPO_ISSUE=openshiftio/openshift.io
 
 assignme="--me"
 
@@ -12,31 +13,38 @@ function red() { msg="$@";echo "\e[40;91;5;82m${msg}\e[0m" ;}
 function yellow() { msg="$@";echo "\e[40;91;5;93m${msg}\e[0m" ;}
 function cyan() { msg="$@";echo "\e[40;91;5;96m${msg}\e[0m" ;}
 
+function help() {
+    echo "-l=LABEL -i[in progress] -n[no_assignme] -j[justopenshiftio]"
+}
 
-while getopts ":l:in" opt; do
-  case $opt in
-    n)
-      assignme=""
-      ;;
-    l)
-      LABEL=${OPTARG}
-      ;;
-    i)
-      BACKLOG_COLUMN="In progress"
-      ;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2
-      echo "-l LABEL -i"
-      exit 1
-      ;;
-  esac
+while getopts ":l:inj" opt; do
+    case $opt in
+        j)
+            justopenshiftio=yes
+            REPO=${OPENSHIFTIO_REPO_ISSUE}
+            ;;
+        n)
+            assignme=""
+            ;;
+        l)
+            LABEL=${OPTARG}
+            ;;
+        i)
+            BACKLOG_COLUMN="In progress"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            help
+            exit 1
+            ;;
+    esac
 done
 
 shift $((OPTIND-1))
 
-REPO="$@"
+REPO=${REPO:-"$1"}
 
-[[ -z ${REPO} ]] && { echo "I need a upstream repo"; exit 1 ;}
+[[ -z ${REPO} ]] && { echo "I need a upstream repo"; help; exit 1 ;}
 
 if [[ $LABEL == "bug" ]];then
     osiolabel="type/bug"
@@ -47,15 +55,13 @@ else
     exit 1
 fi
 
-cat <<EOF
-$(echo -e $(cyan Openshiftio)): openshiftio/openshift.io
-$(echo -e $(cyan Upstream)): $(echo -e $(red $REPO))
-$(echo -e $(cyan Label)): $(echo -e $(yellow $LABEL))
-$(echo -e $(cyan OSIO Label)): $osiolabel
-$(echo -e $(cyan Backlog)): ${BACKLOG}
-$(echo -e $(cyan Column)):: ${BACKLOG_COLUMN}
-EOF
-[[ ${me} ]] && echo "Assigned: me."
+echo -e "$(cyan Openshiftio): ${OPENSHIFTIO_REPO_ISSUE}"
+[[ -z ${justopenshiftio} ]] && echo -e "$(cyan Upstream): $(red $REPO)"
+[[ -z ${justopenshiftio} ]] && echo -e "$(cyan Label): $(yellow $LABEL)"
+echo -e "$(cyan OSIO Label): $osiolabel"
+echo -e "$(cyan Backlog): ${BACKLOG}"
+echo -e "$(cyan Column): ${BACKLOG_COLUMN}"
+[[ -n ${assignme} ]] && echo -e "$(cyan Assigned): $(red me)"
 
 echo
 
@@ -63,20 +69,35 @@ read -n 1 -p "Are you OK with these?: " REPLY
 [[ ${REPLY,,} != y ]] && exit
 echo
 
+set -x
+
 tempf=$(mktemp) || exit
 trap "rm -f -- $tempf" EXIT
 
-REPO_URL=$(github-issue-cli --me --output-file ${tempf} -l ${LABEL} ${REPO} 2>/dev/null)
+if [[ ${justopenshiftio} ]];then
+    LABELS="-l area/pipelines -l sprint/current -l team/build-cd -l ${osiolabel}"
+else
+    LABELS="-l ${LABEL}"
+fi
 
-labelp=$(basename ${REPO_URL}|gsed -e 's/-/ /g' -e 's/[^ _-]*/\u&/g')
+REPO_URL=$(github-issue-cli ${assignme} --output-file ${tempf} ${LABELS} ${REPO} 2>/dev/null)
 
-gsed -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
-
-OPENSHIFTIO_URL=$(github-issue-cli -n --input-file ${tempf} -l area/pipelines -l sprint/current -l team/build-cd -l ${osiolabel} --me openshiftio/openshift.io)
+if [[ -n ${justopenshiftio} ]];then
+    OPENSHIFTIO_URL=${REPO_URL}
+else
+    labelp=$(basename ${REPO_URL}|gsed -e 's/-/ /g' -e 's/[^ _-]*/\u&/g')
+    gsed -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
+    OPENSHIFTIO_URL=$(github-issue-cli \
+                      -n --input-file ${tempf} \
+                      -l area/pipelines -l sprint/current -l team/build-cd \
+                      -l ${osiolabel} ${assignme} ${OPENSHIFTIO_REPO_ISSUE})
+fi
 
 github-project-cli -o fabric8io -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}"
 
 echo
 
+set +x
+
 echo -e "$(red OpenShiftIO URL): ${OPENSHIFTIO_URL}"
-echo "$(red ${labelp} URL): ${REPO_URL}"
+[[ -z ${justopenshiftio} ]] && echo "$(red ${labelp} URL): ${REPO_URL}"
