@@ -68,7 +68,10 @@ def main(args):
             sys.exit(1)
         body = open(body[1:]).read().strip()
 
-    template_processed = DEFAULT_TEMPLATE.format(**locals())
+    if args.input_file:
+        template_processed = open(args.input_file, 'r').read()
+    else:
+        template_processed = DEFAULT_TEMPLATE.format(**locals())
     open(TMPFILE, "w").write(template_processed)
     if not args.noeditor:
         if args.editor:
@@ -80,6 +83,9 @@ def main(args):
         subprocess.call([editor, TMPFILE], stdout=sys.stderr.buffer)
 
     blob = open(TMPFILE, 'r').readlines()
+    if args.output_file:
+        open(args.output_file, 'w').write("".join(blob))
+
     for x in blob:
         if x.startswith("# Labels:"):
             line = x.replace("# Labels:", "").strip()
@@ -157,6 +163,12 @@ if __name__ == '__main__':
 
     parser.add_argument('-t', "--title", type=str,
                         help="Title of the issue")
+
+    parser.add_argument('--output-file', type=str,
+                        help="Save the output of the file to this")
+
+    parser.add_argument('--input-file', type=str,
+                        help="Use this input file")
 
     parser.add_argument('-b', "--body", type=str,
                         help="Body of the issue, if you specify a @ at first "
