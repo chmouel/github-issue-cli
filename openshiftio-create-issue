@@ -85,7 +85,8 @@ echo
 echo
 
 tempf=$(mktemp) || exit
-trap "rm -f -- $tempf" EXIT
+tempf2=$(mktemp) || exit
+trap "rm -f -- $tempf $tempf2" EXIT
 
 if [[ ${justopenshiftio} ]];then
     LABELS="-l area/pipelines -l team/build-cd -l ${osiolabel} ${osioinprogress}"
@@ -110,9 +111,9 @@ fi
 
 # TODO: can't do on an non org yet so avoiding it for now
 if [[ -z ${test} ]];then
-    github-project-cli -o ${ORGANISATION} -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}" >${tempf}
+    github-project-cli -o ${ORGANISATION} -b "${BACKLOG}" -c "${BACKLOG_COLUMN}" -i "${OPENSHIFTIO_URL}" >${tempf2}
     if type -p colout >/dev/null 2>/dev/null;then
-        cat ${tempf}|colout '(https://\S*).*on (https://\S*).*in "([^"]+)" column' yellow,blue,red
+        cat ${tempf2}|colout '(https://\S*).*on (https://\S*).*in "([^"]+)" column' yellow,blue,red
     fi
 
     echo
