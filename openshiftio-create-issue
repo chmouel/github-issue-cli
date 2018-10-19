@@ -53,6 +53,10 @@ shift $((OPTIND-1))
 
 REPO=${REPO:-"$1"}
 
+if [[ -z ${REPO} ]];then
+    REPO=$(hub browse -u -- pull|sed 's,.*github.com/,,;s,/pull$,,' 2>/dev/null)
+fi
+
 [[ -z ${REPO} ]] && { echo "I need a upstream repo"; help; exit 1 ;}
 
 if [[ $LABEL == "bug" ]];then
@@ -116,3 +120,9 @@ fi
 
 echo -e "$(red OpenShiftIO URL): ${OPENSHIFTIO_URL}"
 [[ -z ${justopenshiftio} ]] && echo -e "$(red ${labelp} URL): ${REPO_URL}"
+
+echo
+
+[[ -n ${justopenshiftio}  ]] && \
+    echo "Fix ${OPENSHIFTIO_REPO_ISSUE}#$(basename ${OPENSHIFTIO_URL})" || \
+        echo "This closes ${OPENSHIFTIO_REPO_ISSUE}#$(basename ${OPENSHIFTIO_URL}) and closes #$(basename ${REPO_URL})"
