@@ -39,7 +39,7 @@ while getopts ":l:imjt" opt; do
         i)
             assignme="--me"
             osioinprogress="-l sprint/current"
-            BACKLOG_COLUMN="In progress"
+            BACKLOG_COLUMN="In Progress"
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
