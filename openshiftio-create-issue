@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
-SED=sed
 ORGANISATION="fabric8io"
 BACKLOG_COLUMN="Backlog"
 BACKLOG="Build Team Kanban Board"
 LABEL=bug
 OPENSHIFTIO_REPO_ISSUE=openshiftio/openshift.io
+OSIO_LABELS="-l area/pipelines -l team/build-cd"
 
+SED=sed
+AWK=awk
 type -p gsed 2>/dev/null >/dev/null && SED=gsed
+type -p gawk 2>/dev/null >/dev/null && AWK=gawk
 
 function green() { msg="$@";echo "\e[40;38;5;82m${msg}\e[0m" ;}
 function red() { msg="$@";echo "\e[40;91;5;82m${msg}\e[0m" ;}
@@ -38,7 +41,7 @@ while getopts ":l:imjt" opt; do
             ;;
         i)
             assignme="--me"
-            osioinprogress="-l sprint/current"
+            osioinprogress="true"
             BACKLOG_COLUMN="In Progress"
             ;;
         \?)
@@ -60,9 +63,9 @@ fi
 [[ -z ${REPO} ]] && { echo "I need a upstream repo"; help; exit 1 ;}
 
 if [[ $LABEL == "bug" ]];then
-    osiolabel="type/bug"
+    OSIO_LABELS="${OSIO_LABELS} -l type/bug -l SEV4-low -l priority/p4"
 elif [[ $LABEL == feature ]];then
-    osiolabel="type/task"
+    OSIO_LABELS="${OSIO_LABELS} -l type/task"
 else
     echo "invalid label $LABEL"
     exit 1
@@ -88,13 +91,20 @@ tempf=$(mktemp) || exit
 tempf2=$(mktemp) || exit
 trap "rm -f -- $tempf $tempf2" EXIT
 
+if [[ ${osioinprogress} ]];then
+    OSIO_LABELS="${OSIO_LABELS} -l sprint/current"
+fi
+
 if [[ ${justopenshiftio} ]];then
-    LABELS="-l area/pipelines -l team/build-cd -l ${osiolabel} ${osioinprogress}"
+    LABELS="${OSIO_LABELS}"
 else
     LABELS="-l ${LABEL}"
 fi
 
 REPO_URL=$(github-issue-cli ${assignme} --output-file ${tempf} ${LABELS} ${REPO} 2>/dev/null)
+
+# save title now
+title=$(head -1 ${tempf}|${SED} -r 's/(.*)/\L\1/;s/ /-/g')
 
 if [[ -n ${justopenshiftio} ]];then
     OPENSHIFTIO_URL=${REPO_URL}
@@ -103,8 +113,7 @@ else
     ${SED} -i -e "1 s/^/${labelp/Fabric8 }: /" -e "/# Everything starting/i\\${labelp} issue: ${REPO_URL}" ${tempf}
     OPENSHIFTIO_URL=$(github-issue-cli \
                       -n --input-file ${tempf} \
-                      ${osioinprogress} \
-                      -l area/pipelines -l team/build-cd -l ${osiolabel} \
+                      ${OSIO_LABELS} \
                       ${assignme} ${OPENSHIFTIO_REPO_ISSUE})
 fi
 
@@ -123,6 +132,9 @@ echo -e "$(red OpenShiftIO URL): ${OPENSHIFTIO_URL}"
 [[ -z ${justopenshiftio} ]] && echo -e "$(red ${labelp} URL): ${REPO_URL}"
 
 echo
+
+branchname=$(echo $title|${AWK} -v len=25 '{ if (length($0) > len) print substr($0, 1, len-3); else print; }')
+echo "git checkout -b ${branchname}"
 
 [[ -n ${justopenshiftio}  ]] && \
     echo "Fix ${OPENSHIFTIO_REPO_ISSUE}#$(basename ${OPENSHIFTIO_URL})" || \
