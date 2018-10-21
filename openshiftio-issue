@@ -37,15 +37,10 @@ atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 atexit.register(lambda: os.path.exists(TMPFILE2) and os.remove(TMPFILE2))
 
 
-def execute(command, redirect_stderr_devnull=False):
-    if redirect_stderr_devnull:
-        errrr = open(os.devnull, 'w')
-    else:
-        errrr = subprocess.STDOUT()
-
+def execute(command):
     return subprocess.run(
-        ['/bin/sh', '-c', "%s" % (command)],
-        stdout=subprocess.PIPE, stderr=errrr)
+        ['/bin/sh', '-c', f"{command}"],
+        stdout=subprocess.PIPE)
 
 
 class Main(object):
@@ -78,12 +73,13 @@ class Main(object):
                 raise Exception("no repo detected")
 
         if self.in_progress:
+            self.project_column = "In Progress"
             self.osio_labels.append("sprint/current")
 
         if args.type == "bug":
             self.osio_labels.append("type/bug")
-            self.osio_labels.append("SEV4-low")  # TODO(chmou)
-            self.osio_labels.append("priority/pr4")
+            self.osio_labels.append(f"SEV{args.priority}-low")  # TODO(chmou)
+            self.osio_labels.append(f"priority/p{args.priority}")
         elif args.type == "feature":
             self.osio_labels.append("type/user-story")
         elif args.type == "task":
@@ -132,7 +128,7 @@ class Main(object):
         if self.assignme:
             args.append('--me')
 
-        args.append("--output-file=%s" % (TMPFILE))
+        args.append(f"--output-file={TMPFILE}")
         args.extend(["-l " + x for x in self.upstream_labels])
         args.append(self.repo)
         return issue.main(args)
@@ -144,7 +140,7 @@ class Main(object):
 
     def create_issue_downstream(self, upstream_url):
         args = []
-        args.append("--input-file=%s" % (TMPFILE))
+        args.append(f"--input-file={TMPFILE}")
         if self.assignme:
             args.append('--me')
         args.extend(["-l " + x for x in self.upstream_labels])
@@ -157,7 +153,7 @@ class Main(object):
 
             for line in content[1:]:
                 if line.startswith("# Everything starting"):
-                    new.append("%s issue: %s\n" % (labelp, upstream_url))
+                    new.append(f"{labelp} issue: {upstream_url}\n")
                 new.append(line)
 
         open(TMPFILE, 'w').writelines(new)
@@ -169,10 +165,10 @@ class Main(object):
 
     def add_issue_to_board(self, issue):
         args = []
-        args.append("-o=%s" % (self.project_organisation))
-        args.append("-b=%s" % (self.project_name))
-        args.append("-c=%s" % (self.project_column))
-        args.append("-i=%s" % (issue))
+        args.append(f"-o={self.project_organisation}")
+        args.append(f"-b={self.project_name}")
+        args.append(f"-c={self.project_column}")
+        args.append(f"-i={issue}")
         args.append("create")
         return project.main(args)
 
@@ -216,6 +212,11 @@ if __name__ == '__main__':
                         default=PROJECT_COLUMN,
                         type=str,
                         help="The name of the column in the project backlog.")
+
+    parser.add_argument('-p', '--priority',
+                        default=4,
+                        type=int,
+                        help="Issue priority.")
 
     parser.add_argument('-m', '--assignme', action='store_true',
                         help='Assign to me')
