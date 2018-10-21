@@ -6,6 +6,10 @@ import subprocess
 import tempfile
 import sys
 
+# may be avoided but life is so much better with colours
+from colorama import Fore
+from colorama import Style
+
 import lib.issue as issue
 import lib.project as project
 
@@ -92,19 +96,21 @@ class Main(object):
             self.upstream_labels.append(args.type)
 
     def print_about(self):
-        print("OpenShiftIO: %s" % (self.openshiftio_repo))
-        print("Openshiftio Labels: %s" % (", ".join(
+        print(f'{Style.BRIGHT}{Fore.BLUE}OpenShiftIO{Style.RESET_ALL}: {self.openshiftio_repo}')
+        print(f"{Style.BRIGHT}{Fore.BLUE}Openshiftio Labels{Style.RESET_ALL}: %s" % (", ".join(
             self.osio_labels)))
         if not self.args.just_openshiftio:
-            print("Upstream: %s" % (self.repo))
-            print("Upstream Labels: %s" % (", ".join(self.upstream_labels)))
+            print(f"{Style.BRIGHT}{Fore.BLUE}Upstream{Style.RESET_ALL}: %s" % (self.repo))
+            print(f"{Style.BRIGHT}{Fore.BLUE}Upstream Labels{Style.RESET_ALL}: %s" % (", ".join(self.upstream_labels)))
         if self.project_organisation != PROJECT_ORGANISATION:
-            print("Project Repo: %s" % (
+            print(f"{Style.BRIGHT}{Fore.BLUE}Project Repo{Style.RESET_ALL}: %s" % (
                 self.project_organisation))
-        print("Project Name: %s" % (self.project_name))
-        print("Project Column: %s" % (self.project_column))
-        print("Assigned to: %s" % (
-            self.assignme and self.assignme or "Nobody"))
+        print(f"{Style.BRIGHT}{Fore.BLUE}Project Name{Style.RESET_ALL}: %s" % (
+            self.project_name))
+        print(f"{Style.BRIGHT}{Fore.BLUE}Project Column{Style.RESET_ALL}: %s" %
+              (self.project_column))
+        print(f"{Style.BRIGHT}{Fore.BLUE}Assigned to{Style.RESET_ALL}: %s" % (
+            self.assignme and "Yourself" or "Nobody"))
         print()
 
         if self.no_interactive:
@@ -176,9 +182,13 @@ class Main(object):
         downstream_issue = self.create_issue_downstream(upstream_issue)
         project_created = self.add_issue_to_board(downstream_issue)
 
-        print("Upstream issue: %s" % upstream_issue)
-        print("Downstream issue: %s" % downstream_issue)
-        print(project_created)
+        print()
+        print(f"{Style.BRIGHT}{Fore.BLUE}Upstream issue{Style.RESET_ALL}: %s" %
+              upstream_issue)
+        print(f"{Style.BRIGHT}{Fore.BLUE}Downstream issue{Style.RESET_ALL}: %s"
+              % downstream_issue)
+        print()
+        print(f"{project_created}")
 
 
 if __name__ == '__main__':
