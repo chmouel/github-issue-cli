@@ -4,10 +4,14 @@ import atexit
 import os
 import subprocess
 import tempfile
+import sys
 
-ORGANISATION = "fabric8io"
-BACKLOG_COLUMN = "Backlog"
-BACKLOG = "Build Team Kanban Board"
+import lib.issue as issue
+import lib.project as project
+
+PROJECT_ORGANISATION = "fabric8io"
+PROJECT_NAME = "Build Team"
+PROJECT_COLUMN = "Backlog"
 OPENSHIFTIO_REPO_ISSUE = "openshiftio/openshift.io"
 
 REPO_CONFIG = {
@@ -29,10 +33,15 @@ atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 atexit.register(lambda: os.path.exists(TMPFILE2) and os.remove(TMPFILE2))
 
 
-def execute(command):
+def execute(command, redirect_stderr_devnull=False):
+    if redirect_stderr_devnull:
+        errrr = open(os.devnull, 'w')
+    else:
+        errrr = subprocess.STDOUT()
+
     return subprocess.run(
         ['/bin/sh', '-c', "%s" % (command)],
-        stdout=subprocess.PIPE)
+        stdout=subprocess.PIPE, stderr=errrr)
 
 
 class Main(object):
@@ -42,11 +51,20 @@ class Main(object):
         self.upstream_labels = []
         self.testing = False
         self.openshiftio_repo = OPENSHIFTIO_REPO_ISSUE
+        self.project_organisation = args.project_organisation
+        self.project_name = args.project_name
+        self.project_column = args.project_column
+        self.assignme = args.assignme
+        self.no_interactive = args.no_interactive
+        self.in_progress = args.in_progress
 
         if args.test:
             self.testing = True
             self.openshiftio_repo = "chmouel/space2"
             args.repo = "chmouel/space3"
+            self.project_name = "Test"
+            self.project_organisation = "chmouel/space2"
+            self.project_column = self.in_progress and "In progress" or "To do"
 
         if args.repo:
             self.repo = args.repo
@@ -55,7 +73,7 @@ class Main(object):
             if not self.repo:
                 raise Exception("no repo detected")
 
-        if args.in_progress:
+        if self.in_progress:
             self.osio_labels.append("sprint/current")
 
         if args.type == "bug":
@@ -75,21 +93,92 @@ class Main(object):
 
     def print_about(self):
         print("OpenShiftIO: %s" % (self.openshiftio_repo))
-        print("Openshiftio Labels Labels: %s" % (", ".join(
+        print("Openshiftio Labels: %s" % (", ".join(
             self.osio_labels)))
         if not self.args.just_openshiftio:
             print("Upstream: %s" % (self.repo))
             print("Upstream Labels: %s" % (", ".join(self.upstream_labels)))
-        print("Backlog Project: %s" % (BACKLOG))
-        print("Backlog Column: %s" % (BACKLOG_COLUMN))
+        if self.project_organisation != PROJECT_ORGANISATION:
+            print("Project Repo: %s" % (
+                self.project_organisation))
+        print("Project Name: %s" % (self.project_name))
+        print("Project Column: %s" % (self.project_column))
+        print("Assigned to: %s" % (
+            self.assignme and self.assignme or "Nobody"))
+        print()
+
+        if self.no_interactive:
+            return
+
+        guess = input('Is it okay for you? [yN]: ')
+        if not guess or guess.lower() != "y":
+            sys.exit(0)
 
     def detect_current_repo(self):
         cmd = execute("hub browse -u -- pull|"
                       "sed 's,.*github.com/,,;s,/pull$,,'")
         return cmd.stdout.strip().decode()
 
-    def create_issues(self):
-        pass
+    def create_issue_upstream(self):
+        # oh maaan what a hole i have digged myself into until
+        # we get a proper class for issue :(
+        args = []
+        if self.assignme:
+            args.append('--me')
+
+        args.append("--output-file=%s" % (TMPFILE))
+        args.extend(["-l " + x for x in self.upstream_labels])
+        args.append(self.repo)
+        return issue.main(args)
+
+    def make_repo_pretty(self, repo):
+        repo = repo.replace("-", " ")
+        repo = repo.title()
+        return repo
+
+    def create_issue_downstream(self, upstream_url):
+        args = []
+        args.append("--input-file=%s" % (TMPFILE))
+        if self.assignme:
+            args.append('--me')
+        args.extend(["-l " + x for x in self.upstream_labels])
+
+        labelp = m.make_repo_pretty(os.path.basename(self.repo))
+        with open(TMPFILE, 'r') as x:
+            content = x.readlines()
+            new = []
+            new.append("%s: %s" % (labelp.replace("Fabric8 ", ""), content[0]))
+
+            for line in content[1:]:
+                if line.startswith("# Everything starting"):
+                    new.append("%s issue: %s\n" % (labelp, upstream_url))
+                new.append(line)
+
+        open(TMPFILE, 'w').writelines(new)
+
+        args.append("-n")
+        args.append(self.openshiftio_repo)
+
+        return issue.main(args)
+
+    def add_issue_to_board(self, issue):
+        args = []
+        args.append("-o=%s" % (self.project_organisation))
+        args.append("-b=%s" % (self.project_name))
+        args.append("-c=%s" % (self.project_column))
+        args.append("-i=%s" % (issue))
+        args.append("create")
+        return project.main(args)
+
+    def main(self):
+        self.print_about()
+        upstream_issue = self.create_issue_upstream()
+        downstream_issue = self.create_issue_downstream(upstream_issue)
+        project_created = self.add_issue_to_board(downstream_issue)
+
+        print("Upstream issue: %s" % upstream_issue)
+        print("Downstream issue: %s" % downstream_issue)
+        print(project_created)
 
 
 if __name__ == '__main__':
@@ -105,11 +194,27 @@ if __name__ == '__main__':
                         choices=["bug", 'feature'], nargs="?",
                         help='No upstream repo just openshiftio')
 
+    parser.add_argument('--project-organisation', default=PROJECT_ORGANISATION,
+                        type=str,
+                        help="Organisation where is the project located.")
+
+    parser.add_argument('--project-name', default=PROJECT_NAME,
+                        type=str,
+                        help="The name of the project backlog.")
+
+    parser.add_argument('--project-column',
+                        default=PROJECT_COLUMN,
+                        type=str,
+                        help="The name of the column in the project backlog.")
+
     parser.add_argument('-m', '--assignme', action='store_true',
                         help='Assign to me')
 
     parser.add_argument('-i', '--in-progress', action='store_true',
                         help='Set as working on it')
+
+    parser.add_argument('--no-interactive', action='store_true',
+                        help="Set it if you don't want to be interactive")
 
     parser.add_argument('repo', type=str, nargs="?",
                         metavar="DOWNSTREAM_REPO",
@@ -117,4 +222,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     m = Main(args)
-    m.print_about()
+    m.main()

@@ -3,7 +3,7 @@ set -e
 
 ORGANISATION="fabric8io"
 BACKLOG_COLUMN="Backlog"
-BACKLOG="Build Team Kanban Board"
+BACKLOG="Build Team"
 LABEL=bug
 OPENSHIFTIO_REPO_ISSUE=openshiftio/openshift.io
 OSIO_LABELS="-l area/pipelines -l team/build-cd"

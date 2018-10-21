@@ -48,7 +48,7 @@ atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 
 def main(arguments):
     parser = parse_args(arguments)
-    args = parser.parse_args()
+    args = parser.parse_args(arguments)
 
     labels = args.label or []
     labels_flat = ", ".join(labels)
@@ -83,7 +83,7 @@ def main(arguments):
             editor = os.environ['EDITOR']
         else:
             editor = 'vim'
-        subprocess.call([editor, TMPFILE], stdout=sys.stderr.buffer)
+        subprocess.call([editor, TMPFILE], stdout=open(os.devnull, 'w'))
 
     blob = open(TMPFILE, 'r').readlines()
     if args.output_file:
@@ -150,7 +150,7 @@ def main(arguments):
             assignee.remove('me')
             assignee.append(g.get_user().login)
         issue.add_to_assignees(*assignee)
-    print(issue.html_url)
+    return(issue.html_url)
 
 
 def parse_args(args):

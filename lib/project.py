@@ -46,10 +46,24 @@ class Project(object):
         )
         return(headers, data)
 
-    def get_project_by_desc(self, org, desc):
-        h, d = self.get_projects_org(org)
+    def get_projects_repo(self, repo):
+        headers, data = self.client.requestJsonAndCheck(
+            "GET",
+            "/repos/" + repo + "/projects",
+            headers=self.headers,
+        )
+        return(headers, data)
+
+    def get_project_by_desc(self, repo_org, desc):
+        if len(repo_org.split('/')) == 2:
+            h, d = self.get_projects_repo(repo_org)
+        elif len(repo_org.split('/')) == 1:
+            h, d = self.get_projects_org(repo_org)
+        else:
+            raise Exception("Invalid repo or org: %s" % (repo_org))
+
         for l in d:
-            if l['body'].lower() == desc.lower():
+            if l['name'].lower() == desc.lower():
                 return l
 
     def get_columns_projectid(self, project_id):
@@ -90,32 +104,33 @@ class Project(object):
 
 
 def create(args, token, parser):
-    if not all([args.organisation, args.board, args.column, args.issuepr]):
+    if not all([args.project_repo,
+                args.board, args.column, args.issuepr]):
         print("ERROR: Missing argument for create action.\n")
         parser.print_help()
         return
 
     g = Project(token)
-    project = g.get_project_by_desc(args.organisation,
+    project = g.get_project_by_desc(args.project_repo,
                                     args.board)
+    if not project:
+        raise Exception("Cannot find project board: %s in %s" %
+                        (args.board, args.project_repo))
     column_id_of_backlog = g.get_cards_board_project(
         project['id'], args.column)
-
     column_id_of_backlog = column_id_of_backlog['id']
     h, d = g.add_to_card_to_column(
         column_id_of_backlog,
         args.issuepr
     )
 
-    print("%s has been moved on %s in \"%s\" column" %
-          (args.issuepr,
-           project['html_url'],
-           args.column))
+    return("Issue has been moved to project %s in \"%s\" column URL: %s" %
+           (project['name'], args.column, project['html_url']))
 
 
 def main(arguments):
     parser = parse_args(arguments)
-    args = parser.parse_args()
+    args = parser.parse_args(arguments)
 
     if args.token:
         token = args.token
@@ -126,15 +141,15 @@ def main(arguments):
         ).communicate()[0].strip().decode()
 
     if args.action == "create":
-        create(args, token, parser)
+        return create(args, token, parser)
     elif args.action == "move":
         pass
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser(description='GitHhub Project CLI.')
-    parser.add_argument('-o', '--organisation', type=str,
-                        help='Organisation where the board is located')
+    parser.add_argument('-o', '--project-repo', type=str,
+                        help='Repo or Organisation where the board is located')
     parser.add_argument('-b', '--board', type=str,
                         help='Board by name')
     parser.add_argument('-c', '--column', type=str,

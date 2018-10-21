@@ -1,4 +1,5 @@
 *Note: there is other scripts in this repo you may or may not be interested with, only GitHub Issue CLI is generic enough to use*
+*Note: sorry for the horrible code but this came out from a couple of curl commands to shell script to python code and never got to clean this up, but works at least*
 
 Github Issue CLI
 ================
