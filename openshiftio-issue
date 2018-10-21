@@ -116,7 +116,12 @@ class Main(object):
         if self.no_interactive:
             return
 
-        guess = input('Is it okay for you? [yN]: ')
+        try:
+            guess = input('Is it okay for you? [yN]: ')
+        except(KeyboardInterrupt):
+            print()
+            guess = None
+
         if not guess or guess.lower() != "y":
             sys.exit(0)
 
