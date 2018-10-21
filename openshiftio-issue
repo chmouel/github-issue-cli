@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+import argparse
+import atexit
+import os
+import subprocess
+import tempfile
+
+ORGANISATION = "fabric8io"
+BACKLOG_COLUMN = "Backlog"
+BACKLOG = "Build Team Kanban Board"
+OPENSHIFTIO_REPO_ISSUE = "openshiftio/openshift.io"
+
+REPO_CONFIG = {
+    'fabric8-services/fabric8-jenkins-proxy': {
+        'bug': 'kind/bug',
+        'task': 'kind/task',
+        'feature': 'kind/feature',
+    },
+    'fabric8-services/fabric8-jenkins-idler': {
+        'bug': 'kind/bug',
+        'task': 'kind/task',
+        'feature': 'kind/feature',
+    },
+}
+
+TMPFILE = tempfile.mktemp("openshiftio-issue.py-1")
+TMPFILE2 = tempfile.mktemp("openshiftio-issue.py-2")
+atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
+atexit.register(lambda: os.path.exists(TMPFILE2) and os.remove(TMPFILE2))
+
+
+def execute(command):
+    return subprocess.run(
+        ['/bin/sh', '-c', "%s" % (command)],
+        stdout=subprocess.PIPE)
+
+
+class Main(object):
+    def __init__(self, args):
+        self.args = args
+        self.osio_labels = []
+        self.upstream_labels = []
+        self.testing = False
+        self.openshiftio_repo = OPENSHIFTIO_REPO_ISSUE
+
+        if args.test:
+            self.testing = True
+            self.openshiftio_repo = "chmouel/space2"
+            args.repo = "chmouel/space3"
+
+        if args.repo:
+            self.repo = args.repo
+        else:
+            self.repo = self.detect_current_repo()
+            if not self.repo:
+                raise Exception("no repo detected")
+
+        if args.in_progress:
+            self.osio_labels.append("sprint/current")
+
+        if args.type == "bug":
+            self.osio_labels.append("type/bug")
+            self.osio_labels.append("SEV4-low")  # TODO(chmou)
+            self.osio_labels.append("priority/pr4")
+        elif args.type == "feature":
+            self.osio_labels.append("type/user-story")
+        elif args.type == "task":
+            self.osio_labels.append("type/task")
+
+        if self.repo in REPO_CONFIG and \
+           args.type in REPO_CONFIG[self.repo]:
+            self.upstream_labels.append(REPO_CONFIG[self.repo][args.type])
+        else:
+            self.upstream_labels.append(args.type)
+
+    def print_about(self):
+        print("OpenShiftIO: %s" % (self.openshiftio_repo))
+        print("Openshiftio Labels Labels: %s" % (", ".join(
+            self.osio_labels)))
+        if not self.args.just_openshiftio:
+            print("Upstream: %s" % (self.repo))
+            print("Upstream Labels: %s" % (", ".join(self.upstream_labels)))
+        print("Backlog Project: %s" % (BACKLOG))
+        print("Backlog Column: %s" % (BACKLOG_COLUMN))
+
+    def detect_current_repo(self):
+        cmd = execute("hub browse -u -- pull|"
+                      "sed 's,.*github.com/,,;s,/pull$,,'")
+        return cmd.stdout.strip().decode()
+
+    def create_issues(self):
+        pass
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Create an OpenShiftIO issue.')
+    parser.add_argument('--test', action='store_true', help='Test mode')
+
+    parser.add_argument('-j', '--just-openshiftio', action='store_true',
+                        help='No upstream repo just openshiftio')
+
+    parser.add_argument('-t', '--type',
+                        default="bug", const="bug",
+                        choices=["bug", 'feature'], nargs="?",
+                        help='No upstream repo just openshiftio')
+
+    parser.add_argument('-m', '--assignme', action='store_true',
+                        help='Assign to me')
+
+    parser.add_argument('-i', '--in-progress', action='store_true',
+                        help='Set as working on it')
+
+    parser.add_argument('repo', type=str, nargs="?",
+                        metavar="DOWNSTREAM_REPO",
+                        help='Set as working on it')
+
+    args = parser.parse_args()
+    m = Main(args)
+    m.print_about()
