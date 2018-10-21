@@ -2,9 +2,11 @@
 import argparse
 import atexit
 import os
+import re
 import subprocess
-import tempfile
 import sys
+import string
+import tempfile
 
 # may be avoided but life is so much better with colours
 from colorama import Fore
@@ -44,6 +46,8 @@ def execute(command):
 
 
 class Main(object):
+    _title = None
+
     def __init__(self, args):
         self.args = args
         self.osio_labels = []
@@ -116,6 +120,20 @@ class Main(object):
         if not guess or guess.lower() != "y":
             sys.exit(0)
 
+    def make_repo_pretty(self, repo):
+        repo = repo.replace("-", " ")
+        repo = repo.title()
+        return repo
+
+    def make_branche_name_out_title(self, title):
+        # mehhhhh
+        title = title.lower().replace(" ", "-")
+        title = title.replace('!', "")
+        title = title.replace('?', "")
+        title = title.replace('"', "")
+        title = title.replace('\\', "")
+        return title[0:25]
+
     def detect_current_repo(self):
         cmd = execute("hub browse -u -- pull|"
                       "sed 's,.*github.com/,,;s,/pull$,,'")
@@ -133,11 +151,6 @@ class Main(object):
         args.append(self.repo)
         return issue.main(args)
 
-    def make_repo_pretty(self, repo):
-        repo = repo.replace("-", " ")
-        repo = repo.title()
-        return repo
-
     def create_issue_downstream(self, upstream_url):
         args = []
         args.append(f"--input-file={TMPFILE}")
@@ -148,6 +161,7 @@ class Main(object):
         labelp = m.make_repo_pretty(os.path.basename(self.repo))
         with open(TMPFILE, 'r') as x:
             content = x.readlines()
+            self._title = content[0]
             new = []
             new.append("%s: %s" % (labelp.replace("Fabric8 ", ""), content[0]))
 
@@ -186,6 +200,18 @@ class Main(object):
         print()
         print(f"{project_created}")
 
+        print("\nHelpers:\n")
+        githubbranch = "issue-%s" % (os.path.basename(upstream_issue))
+        if self._title:
+            githubbranch += "-%s" % (
+                self.make_branche_name_out_title(self._title)
+            )
+        print(f"git checkout -b {githubbranch}")
+        print("This closes %s#%s and closes #%s" % (
+            self.openshiftio_repo,
+            os.path.basename(downstream_issue),
+            os.path.basename(upstream_issue),
+        ))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
