@@ -69,7 +69,16 @@ class Main(object):
 
         if args.repo:
             self.repo = args.repo
+            gopath_githubrepo = os.path.join(os.path.expandvars(
+                f"$GOPATH/src.github.com/{args.repo}"), ".git")
+            if os.path.exists(gopath_githubrepo):
+                self.gitroot = gopath_githubrepo
+            else:
+                self.gitroot = os.path.expanduser("~/tmp")
         else:
+            self.gitroot = execute(
+                "git rev-parse --show-toplevel").stdout.strip().decode()
+
             self.repo = self.detect_current_repo()
             if not self.repo:
                 raise Exception("no repo detected")
@@ -208,12 +217,17 @@ class Main(object):
             githubbranch += "-%s" % (
                 self.make_branche_name_out_title(self._title)
             )
-        print(f"git checkout -b {githubbranch}")
-        print("This closes %s#%s and closes #%s" % (
-            self.openshiftio_repo,
-            os.path.basename(downstream_issue),
-            os.path.basename(upstream_issue),
-        ))
+        ret = f"git checkout -b {githubbranch}\n"
+        ret += f"This closes {self.openshiftio_repo}"
+        ret += f"#{os.path.basename(downstream_issue)} "
+        ret += f"and closes #{os.path.basename(upstream_issue)}\n"
+
+        issuepath = os.path.join(self.gitroot, "issues")
+        if not os.path.exists(issuepath):
+            os.makedirs(issuepath)
+        issuefile = os.path.join(issuepath, githubbranch)
+        open(issuefile, 'w').write(ret)
+        print(ret)
 
 
 if __name__ == '__main__':
