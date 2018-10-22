@@ -14,14 +14,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-# WIP: we mostly only able to create a card in a column for now, will improve on
-# the go.
+# WIP: we mostly only able to create a card in a column for now, will improve
+# on the go.
 #
 import argparse
 import github as gh
 import os
 import subprocess
 
+from lib.common import TerminalColors as C
 
 class Project(object):
     default_base_url = "https://api.github.com"
@@ -124,8 +125,14 @@ def create(args, token, parser):
         args.issuepr
     )
 
-    return("Issue has been moved to project %s in \"%s\" column URL: %s" %
-           (project['name'], args.column, project['html_url']))
+    # Can't get f-string to work here :()
+    return ("Issue has been moved to project "
+            "%s%s%s in "
+            "%s\"%s\"%s "
+            "column URL: %s%s%s" %
+            (C.YELLOW, project['name'], C.END,
+             C.GREEN, args.column, C.END,
+             C.RED, project['html_url'], C.END))
 
 
 def main(arguments):

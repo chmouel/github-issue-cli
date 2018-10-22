@@ -3,15 +3,13 @@ import argparse
 import atexit
 import os
 import re
+import string
 import subprocess
 import sys
-import string
 import tempfile
 
 # may be avoided but life is so much better with colours
-from colorama import Fore
-from colorama import Style
-
+from lib.common import TerminalColors as C
 import lib.issue as issue
 import lib.project as project
 
@@ -96,20 +94,21 @@ class Main(object):
             self.upstream_labels.append(args.type)
 
     def print_about(self):
-        print(f'{Style.BRIGHT}{Fore.BLUE}OpenShiftIO{Style.RESET_ALL}: {self.openshiftio_repo}')
-        print(f"{Style.BRIGHT}{Fore.BLUE}Openshiftio Labels{Style.RESET_ALL}: %s" % (", ".join(
+        print(f'{C.BLUE}OpenShiftIO{C.END}: {self.openshiftio_repo}')
+        print(f"{C.BLUE}Openshiftio Labels{C.END}: %s" % (", ".join(
             self.osio_labels)))
         if not self.args.just_openshiftio:
-            print(f"{Style.BRIGHT}{Fore.BLUE}Upstream{Style.RESET_ALL}: %s" % (self.repo))
-            print(f"{Style.BRIGHT}{Fore.BLUE}Upstream Labels{Style.RESET_ALL}: %s" % (", ".join(self.upstream_labels)))
+            print(f"{C.BLUE}Upstream{C.END}: %s" % (self.repo))
+            print(f"{C.BLUE}Upstream Labels{C.END}: %s" % (
+                ", ".join(self.upstream_labels)))
         if self.project_organisation != PROJECT_ORGANISATION:
-            print(f"{Style.BRIGHT}{Fore.BLUE}Project Repo{Style.RESET_ALL}: %s" % (
+            print(f"{C.BLUE}Project Repo{C.END}: %s" % (
                 self.project_organisation))
-        print(f"{Style.BRIGHT}{Fore.BLUE}Project Name{Style.RESET_ALL}: %s" % (
+        print(f"{C.BLUE}Project Name{C.END}: %s" % (
             self.project_name))
-        print(f"{Style.BRIGHT}{Fore.BLUE}Project Column{Style.RESET_ALL}: %s" %
+        print(f"{C.BLUE}Project Column{C.END}: %s" %
               (self.project_column))
-        print(f"{Style.BRIGHT}{Fore.BLUE}Assigned to{Style.RESET_ALL}: %s" % (
+        print(f"{C.BLUE}Assigned to{C.END}: %s" % (
             self.assignme and "Yourself" or "Nobody"))
         print()
 
@@ -133,10 +132,8 @@ class Main(object):
     def make_branche_name_out_title(self, title):
         # mehhhhh
         title = title.lower().replace(" ", "-")
-        title = title.replace('!', "")
-        title = title.replace('?', "")
-        title = title.replace('"', "")
-        title = title.replace('\\', "")
+        tt = re.compile('[{%s}]' % (string.punctuation.replace('-', '')))
+        title = tt.sub('', title)
         return title[0:25]
 
     def detect_current_repo(self):
@@ -198,14 +195,14 @@ class Main(object):
         project_created = self.add_issue_to_board(downstream_issue)
 
         print()
-        print(f"{Style.BRIGHT}{Fore.BLUE}Upstream issue{Style.RESET_ALL}: %s" %
+        print(f"{C.BLUE}Upstream issue{C.END}: %s" %
               upstream_issue)
-        print(f"{Style.BRIGHT}{Fore.BLUE}Downstream issue{Style.RESET_ALL}: %s"
+        print(f"{C.BLUE}Downstream issue{C.END}: %s"
               % downstream_issue)
         print()
         print(f"{project_created}")
 
-        print("\nHelpers:\n")
+        print(f"\n{C.GREEN}Helpers:{C.END}\n")
         githubbranch = "issue-%s" % (os.path.basename(upstream_issue))
         if self._title:
             githubbranch += "-%s" % (
@@ -217,6 +214,7 @@ class Main(object):
             os.path.basename(downstream_issue),
             os.path.basename(upstream_issue),
         ))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
