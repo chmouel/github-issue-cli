@@ -16,7 +16,7 @@ import lib.project as project
 PROJECT_ORGANISATION = "fabric8io"
 PROJECT_NAME = "Build Team"
 PROJECT_COLUMN = "Backlog"
-OPENSHIFTIO_REPO_ISSUE = "openshiftio/openshift.io"
+DOWNSTREAM_REPO = "openshiftio/openshift.io"
 
 REPO_CONFIG = {
     'fabric8-services/fabric8-jenkins-proxy': {
@@ -51,7 +51,7 @@ class Main(object):
         self.osio_labels = []
         self.upstream_labels = []
         self.testing = False
-        self.openshiftio_repo = OPENSHIFTIO_REPO_ISSUE
+        self.downstream_repo = DOWNSTREAM_REPO
         self.project_organisation = args.project_organisation
         self.project_name = args.project_name
         self.project_column = args.project_column
@@ -61,14 +61,14 @@ class Main(object):
 
         if args.test:
             self.testing = True
-            self.openshiftio_repo = "chmouel/space2"
+            self.downstream_repo = "chmouel/space2"
             args.repo = "chmouel/space3"
             self.project_name = "Test"
             self.project_organisation = "chmouel/space2"
             self.project_column = self.in_progress and "In progress" or "To do"
 
         if args.repo:
-            self.repo = args.repo
+            self.upstream_repo = args.repo
             gopath_githubrepo = os.path.join(os.path.expandvars(
                 f"$GOPATH/src.github.com/{args.repo}"), ".git")
             if os.path.exists(gopath_githubrepo):
@@ -76,12 +76,13 @@ class Main(object):
             else:
                 self.gitroot = os.path.expanduser("~/tmp")
         else:
-            self.gitroot = execute(
-                "git rev-parse --show-toplevel").stdout.strip().decode()
-
-            self.repo = self.detect_current_repo()
-            if not self.repo:
+            self.upstream_repo = self.detect_current_repo()
+            if not self.upstream_repo:
                 raise Exception("no repo detected")
+            self.gitroot = os.path.join(
+                execute(
+                    "git rev-parse --show-toplevel").stdout.strip().decode(),
+                ".git")
 
         if self.in_progress:
             self.project_column = "In Progress"
@@ -96,18 +97,19 @@ class Main(object):
         elif args.type == "task":
             self.osio_labels.append("type/task")
 
-        if self.repo in REPO_CONFIG and \
-           args.type in REPO_CONFIG[self.repo]:
-            self.upstream_labels.append(REPO_CONFIG[self.repo][args.type])
+        if self.upstream_repo in REPO_CONFIG and \
+           args.type in REPO_CONFIG[self.upstream_repo]:
+            self.upstream_labels.append(
+                REPO_CONFIG[self.upstream_repo][args.type])
         else:
             self.upstream_labels.append(args.type)
 
     def print_about(self):
-        print(f'{C.BLUE}OpenShiftIO{C.END}: {self.openshiftio_repo}')
+        print(f'{C.BLUE}OpenShiftIO{C.END}: {self.downstream_repo}')
         print(f"{C.BLUE}Openshiftio Labels{C.END}: %s" % (", ".join(
             self.osio_labels)))
         if not self.args.just_openshiftio:
-            print(f"{C.BLUE}Upstream{C.END}: %s" % (self.repo))
+            print(f"{C.BLUE}Upstream{C.END}: %s" % (self.upstream_repo))
             print(f"{C.BLUE}Upstream Labels{C.END}: %s" % (
                 ", ".join(self.upstream_labels)))
         if self.project_organisation != PROJECT_ORGANISATION:
@@ -159,7 +161,7 @@ class Main(object):
 
         args.append(f"--output-file={TMPFILE}")
         args.extend(["-l " + x for x in self.upstream_labels])
-        args.append(self.repo)
+        args.append(self.upstream_repo)
         return issue.main(args)
 
     def create_issue_downstream(self, upstream_url):
@@ -169,7 +171,7 @@ class Main(object):
             args.append('--me')
         args.extend(["-l " + x for x in self.upstream_labels])
 
-        labelp = m.make_repo_pretty(os.path.basename(self.repo))
+        labelp = m.make_repo_pretty(os.path.basename(self.upstream_repo))
         with open(TMPFILE, 'r') as x:
             content = x.readlines()
             self._title = content[0]
@@ -184,7 +186,7 @@ class Main(object):
         open(TMPFILE, 'w').writelines(new)
 
         args.append("-n")
-        args.append(self.openshiftio_repo)
+        args.append(self.downstream_repo)
 
         return issue.main(args)
 
@@ -217,8 +219,10 @@ class Main(object):
             githubbranch += "-%s" % (
                 self.make_branche_name_out_title(self._title)
             )
-        ret = f"git checkout -b {githubbranch}\n"
-        ret += f"This closes {self.openshiftio_repo}"
+
+        ret = f"Upstream: {upstream_issue}\nDownstream: {downstream_issue}\n\n"
+        ret += f"git checkout -b {githubbranch}\n"
+        ret += f"This closes {self.downstream_repo}"
         ret += f"#{os.path.basename(downstream_issue)} "
         ret += f"and closes #{os.path.basename(upstream_issue)}\n"
 
