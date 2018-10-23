@@ -132,8 +132,15 @@ class Main(object):
             self.project_name))
         print(f"{C.BLUE}Project Column{C.END}: %s" %
               (self.project_column))
-        print(f"{C.BLUE}Assigned to{C.END}: %s" % (
-            self.assignme and "Yourself" or "Nobody"))
+        assignee_str = ""
+        if self.assignme:
+            assignee_str += "Yourself"
+            if self.args.assign:
+                assignee_str += " and "
+        if self.args.assign:
+            assignee_str += ",".join(self.args.assign)
+        print(f"{C.BLUE}Assigned to{C.END}: {assignee_str}")
+
         print()
 
         if self.no_interactive:
@@ -171,6 +178,9 @@ class Main(object):
         args = []
         if self.assignme:
             args.append('--me')
+
+        if self.assign:
+            args.append(f"--assign {self.assign}")
 
         args.append(f"--output-file={TMPFILE}")
         args.extend(["-l " + x for x in self.upstream_labels])
@@ -289,6 +299,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-m', '--assignme', action='store_true',
                         help='Assign to me')
+
+    parser.add_argument('--assign', type=str, action='append', nargs="?",
+                        help='Assign to this user')
 
     parser.add_argument('-i', '--in-progress', action='store_true',
                         help='Set as working on it')
