@@ -38,6 +38,8 @@ SEVERITY_MAP = {
     4: "SEV4-low",
 }
 
+DEFAULT_UPSTREAM_LABELS = ["team/build-cd"]
+
 TMPFILE = tempfile.mktemp("openshiftio-issue.py-1")
 TMPFILE2 = tempfile.mktemp("openshiftio-issue.py-2")
 atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
@@ -55,7 +57,7 @@ class Main(object):
 
     def __init__(self, args):
         self.args = args
-        self.osio_labels = []
+        self.downstream_labels = DEFAULT_UPSTREAM_LABELS
         self.upstream_labels = []
         self.testing = False
         self.downstream_repo = DOWNSTREAM_REPO
@@ -96,16 +98,16 @@ class Main(object):
 
         if self.in_progress:
             self.project_column = "In Progress"
-            self.osio_labels.append("sprint/current")
+            self.downstream_labels.append("sprint/current")
 
         if args.type == "bug" and self.downstream_repo == DOWNSTREAM_REPO:
-            self.osio_labels.append("type/bug")
-            self.osio_labels.append({SEVERITY_MAP[args.priority]})
-            self.osio_labels.append(f"priority/p{args.priority}")
+            self.downstream_labels.append("type/bug")
+            self.downstream_labels.append(SEVERITY_MAP[args.priority])
+            self.downstream_labels.append(f"priority/p{args.priority}")
         elif args.type == "feature":
-            self.osio_labels.append("type/user-story")
+            self.downstream_labels.append("type/user-story")
         elif args.type == "task":
-            self.osio_labels.append("type/task")
+            self.downstream_labels.append("type/task")
 
         if not args.just_openshiftio:
             if self.upstream_repo in REPO_CONFIG and \
@@ -118,7 +120,7 @@ class Main(object):
     def print_about(self):
         print(f'{C.BLUE}OpenShiftIO{C.END}: {self.downstream_repo}')
         print(f"{C.BLUE}Openshiftio Labels{C.END}: %s" % (", ".join(
-            self.osio_labels)))
+            self.downstream_labels)))
         if not self.args.just_openshiftio:
             print(f"{C.BLUE}Upstream{C.END}: %s" % (self.upstream_repo))
             print(f"{C.BLUE}Upstream Labels{C.END}: %s" % (
