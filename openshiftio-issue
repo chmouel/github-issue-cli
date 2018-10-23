@@ -67,6 +67,9 @@ class Main(object):
             self.project_organisation = "chmouel/space2"
             self.project_column = self.in_progress and "In progress" or "To do"
 
+        if args.repo and args.just_openshiftio:
+            raise Exception("No need a repo when issuing only on openshiftio")
+
         if args.repo:
             self.upstream_repo = args.repo
             gopath_githubrepo = os.path.join(os.path.expandvars(
@@ -75,7 +78,7 @@ class Main(object):
                 self.gitroot = gopath_githubrepo
             else:
                 self.gitroot = os.path.expanduser("~/tmp")
-        else:
+        elif not args.just_openshiftio:
             self.upstream_repo = self.detect_current_repo()
             if not self.upstream_repo:
                 raise Exception("no repo detected")
@@ -97,12 +100,13 @@ class Main(object):
         elif args.type == "task":
             self.osio_labels.append("type/task")
 
-        if self.upstream_repo in REPO_CONFIG and \
-           args.type in REPO_CONFIG[self.upstream_repo]:
-            self.upstream_labels.append(
-                REPO_CONFIG[self.upstream_repo][args.type])
-        else:
-            self.upstream_labels.append(args.type)
+        if not args.just_openshiftio:
+            if self.upstream_repo in REPO_CONFIG and \
+               args.type in REPO_CONFIG[self.upstream_repo]:
+                self.upstream_labels.append(
+                    REPO_CONFIG[self.upstream_repo][args.type])
+            else:
+                self.upstream_labels.append(args.type)
 
     def print_about(self):
         print(f'{C.BLUE}OpenShiftIO{C.END}: {self.downstream_repo}')
@@ -166,28 +170,31 @@ class Main(object):
 
     def create_issue_downstream(self, upstream_url):
         args = []
-        args.append(f"--input-file={TMPFILE}")
+        if not self.args.just_openshiftio:
+            args.append(f"--input-file={TMPFILE}")
         if self.assignme:
             args.append('--me')
         args.extend(["-l " + x for x in self.upstream_labels])
 
-        labelp = m.make_repo_pretty(os.path.basename(self.upstream_repo))
-        with open(TMPFILE, 'r') as x:
-            content = x.readlines()
-            self._title = content[0]
-            new = []
-            new.append("%s: %s" % (labelp.replace("Fabric8 ", ""), content[0]))
+        if not self.args.just_openshiftio:
+            labelp = m.make_repo_pretty(os.path.basename(self.upstream_repo))
+            with open(TMPFILE, 'r') as x:
+                content = x.readlines()
+                self._title = content[0]
+                new = []
+                new.append("%s: %s" % (labelp.replace("Fabric8 ", ""),
+                                       content[0]))
 
-            for line in content[1:]:
-                if line.startswith("# Everything starting"):
-                    new.append(f"{labelp} issue: {upstream_url}\n")
-                new.append(line)
+                for line in content[1:]:
+                    if line.startswith("# Everything starting"):
+                        new.append(f"{labelp} issue: {upstream_url}\n")
+                    new.append(line)
 
-        open(TMPFILE, 'w').writelines(new)
+            open(TMPFILE, 'w').writelines(new)
 
-        args.append("-n")
+            args.append("-n")
+
         args.append(self.downstream_repo)
-
         return issue.main(args)
 
     def add_issue_to_board(self, issue):
@@ -200,38 +207,44 @@ class Main(object):
         return project.main(args)
 
     def main(self):
+        upstream_issue = None
         self.print_about()
-        upstream_issue = self.create_issue_upstream()
+
+        if not self.args.just_openshiftio:
+            upstream_issue = self.create_issue_upstream()
         downstream_issue = self.create_issue_downstream(upstream_issue)
         project_created = self.add_issue_to_board(downstream_issue)
 
         print()
-        print(f"{C.BLUE}Upstream issue{C.END}: %s" %
-              upstream_issue)
+        if not self.args.just_openshiftio:
+            print(f"{C.BLUE}Upstream issue{C.END}: %s" %
+                  upstream_issue)
         print(f"{C.BLUE}Downstream issue{C.END}: %s"
               % downstream_issue)
         print()
         print(f"{project_created}")
 
-        print(f"\n{C.GREEN}Helpers:{C.END}\n")
-        githubbranch = "issue-%s" % (os.path.basename(upstream_issue))
-        if self._title:
-            githubbranch += "-%s" % (
-                self.make_branche_name_out_title(self._title)
-            )
+        if not self.args.just_openshiftio:
+            print(f"\n{C.GREEN}Helpers:{C.END}\n")
+            githubbranch = "issue-%s" % (os.path.basename(upstream_issue))
+            if self._title:
+                githubbranch += "-%s" % (
+                    self.make_branche_name_out_title(self._title)
+                )
 
-        ret = f"Upstream: {upstream_issue}\nDownstream: {downstream_issue}\n\n"
-        ret += f"git checkout -b {githubbranch}\n"
-        ret += f"This closes {self.downstream_repo}"
-        ret += f"#{os.path.basename(downstream_issue)} "
-        ret += f"and closes #{os.path.basename(upstream_issue)}\n"
+            ret = f"Upstream: {upstream_issue}\n"
+            ret += f"Downstream: {downstream_issue}\n\n"
+            ret += f"git checkout -b {githubbranch}\n"
+            ret += f"This closes {self.downstream_repo}"
+            ret += f"#{os.path.basename(downstream_issue)} "
+            ret += f"and closes #{os.path.basename(upstream_issue)}\n"
 
-        issuepath = os.path.join(self.gitroot, "issues")
-        if not os.path.exists(issuepath):
-            os.makedirs(issuepath)
-        issuefile = os.path.join(issuepath, githubbranch)
-        open(issuefile, 'w').write(ret)
-        print(ret)
+            issuepath = os.path.join(self.gitroot, "issues")
+            if not os.path.exists(issuepath):
+                os.makedirs(issuepath)
+            issuefile = os.path.join(issuepath, githubbranch)
+            open(issuefile, 'w').write(ret)
+            print(ret)
 
 
 if __name__ == '__main__':
