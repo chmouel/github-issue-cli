@@ -31,6 +31,13 @@ REPO_CONFIG = {
     },
 }
 
+SEVERITY_MAP = {
+    1: "SEV1-urgent",
+    2: "SEV2-high",
+    3: "SEV3-medium",
+    4: "SEV4-low",
+}
+
 TMPFILE = tempfile.mktemp("openshiftio-issue.py-1")
 TMPFILE2 = tempfile.mktemp("openshiftio-issue.py-2")
 atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
@@ -91,9 +98,9 @@ class Main(object):
             self.project_column = "In Progress"
             self.osio_labels.append("sprint/current")
 
-        if args.type == "bug":
+        if args.type == "bug" and self.downstream_repo == DOWNSTREAM_REPO:
             self.osio_labels.append("type/bug")
-            self.osio_labels.append(f"SEV{args.priority}-low")  # TODO(chmou)
+            self.osio_labels.append({SEVERITY_MAP[args.priority]})
             self.osio_labels.append(f"priority/p{args.priority}")
         elif args.type == "feature":
             self.osio_labels.append("type/user-story")
