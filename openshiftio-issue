@@ -199,7 +199,7 @@ class Main(object):
             args.append(f"--input-file={TMPFILE}")
         if self.assignme:
             args.append('--me')
-        args.extend(["-l " + x for x in self.downstream_labels])
+        args.extend(["--label=" + x for x in self.downstream_labels])
 
         if not self.args.just_openshiftio:
             labelp = m.make_repo_pretty(os.path.basename(self.upstream_repo))
@@ -213,6 +213,8 @@ class Main(object):
                 for line in content[1:]:
                     if line.startswith("# Everything starting"):
                         new.append(f"{labelp} issue: {upstream_url}\n")
+                    if line.startswith("# Labels: "):  # we use our own
+                        continue
                     new.append(line)
 
             open(TMPFILE, 'w').writelines(new)
