@@ -168,7 +168,10 @@ class Main(object):
         title = title.lower().replace(" ", "-")
         tt = re.compile('[{%s}]' % (string.punctuation.replace('-', '')))
         title = tt.sub('', title)
-        return title[0:25]
+        title = title[0:25]
+        if title.endswith("-"):
+            title = title[:-1]
+        return title
 
     def detect_current_repo(self):
         cmd = execute("hub browse -u -- pull|"
