@@ -24,6 +24,7 @@ import subprocess
 
 from lib.common import TerminalColors as C
 
+
 class Project(object):
     default_base_url = "https://api.github.com"
     default_timeout = 10
@@ -90,6 +91,19 @@ class Project(object):
         )
         return(headers, data)
 
+    def move_card_to_column(self, card_id, dest_column_id):
+        data = {
+            'position': "top",
+            "column_id": dest_column_id
+        }
+        headers, data = self.client.requestJsonAndCheck(
+            "POST",
+            "/projects/columns/cards/" + str(card_id) + "/moves",
+            headers=self.headers,
+            input=data
+        )
+        return(headers, data)
+
     def add_to_card_to_column(self, column_id, url):
         data = {
             'note': url
@@ -105,18 +119,18 @@ class Project(object):
 
 
 def create(args, token, parser):
-    if not all([args.project_repo,
+    if not all([args.project_location,
                 args.board, args.column, args.issuepr]):
         print("ERROR: Missing argument for create action.\n")
         parser.print_help()
         return
 
     g = Project(token)
-    project = g.get_project_by_desc(args.project_repo,
+    project = g.get_project_by_desc(args.project_location,
                                     args.board)
     if not project:
         raise Exception("Cannot find project board: %s in %s" %
-                        (args.board, args.project_repo))
+                        (args.board, args.project_location))
     column_id_of_backlog = g.get_cards_board_project(
         project['id'], args.column)
     column_id_of_backlog = column_id_of_backlog['id']
@@ -126,13 +140,47 @@ def create(args, token, parser):
     )
 
     # Can't get f-string to work here :()
-    return ("Issue has been moved to project "
+    return ("Issue has been added to project "
             "%s%s%s in "
             "%s\"%s\"%s "
             "column URL: %s%s%s" %
             (C.YELLOW, project['name'], C.END,
              C.GREEN, args.column, C.END,
              C.RED, project['html_url'], C.END))
+
+
+def move_all(args, token, parser):
+    if not all([args.project_location, args.board,
+                args.destination_column, args.column]):
+        print("I need a column and a"
+              " destination_column when moving all cards")
+        parser.print_help()
+        return
+
+    g = Project(token)
+    project = g.get_project_by_desc(args.project_location,
+                                    args.board)
+    if not project:
+        raise Exception("Cannot find project board: %s in %s" %
+                        (args.board, args.project_location))
+
+    column_orig = g.get_cards_board_project(
+        project['id'], args.column)
+    assert(column_orig)
+
+    column_dest = g.get_cards_board_project(
+        project['id'], args.destination_column)
+    assert(column_dest)
+
+    _, cards = g.list_card_column(column_orig['id'])
+    for card in cards:
+        g.move_card_to_column(card['id'], column_dest['id'])
+
+    return ("We have moved %s\"%d\"%s cards from %s\"%s\"%s to %s\"%s\"%s" % (
+        C.YELLOW, len(cards), C.END,
+        C.GREEN, args.column, C.END,
+        C.BLUE, args.destination_column, C.END,
+    ))
 
 
 def main(arguments):
@@ -149,13 +197,13 @@ def main(arguments):
 
     if args.action == "create":
         return create(args, token, parser)
-    elif args.action == "move":
-        pass
+    elif args.action == "moveall":
+        return move_all(args, token, parser)
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser(description='GitHhub Project CLI.')
-    parser.add_argument('-o', '--project-repo', type=str,
+    parser.add_argument('-o', '--project-location', type=str,
                         help='Repo or Organisation where the board is located')
     parser.add_argument('-b', '--board', type=str,
                         help='Board by name')
@@ -176,7 +224,6 @@ def parse_args(args):
                         help="GitHub Oauth Token. It will try the GITHUB_TOKEN"
                         " env or from `git config --get github.oauth-token`")
 
-    parser.add_argument("action", type=str, metavar="ACTION",
-                        choices=["create", "move"])
+    parser.add_argument("action", type=str, choices=["create", "moveall"])
 
     return parser
