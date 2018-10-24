@@ -99,6 +99,7 @@ class Main(object):
         if self.in_progress:
             self.project_column = "In Progress"
             self.downstream_labels.append("sprint/current")
+            self.downstream_labels.append("status/in-progress")
 
         if args.type == "bug" and self.downstream_repo == DOWNSTREAM_REPO:
             self.downstream_labels.append("type/bug")
