@@ -140,6 +140,8 @@ class Main(object):
                 assignee_str += " and "
         if self.args.assign:
             assignee_str += ",".join(self.args.assign)
+        if not assignee_str:
+            assignee_str = "Nobody"
         print(f"{C.BLUE}Assigned to{C.END}: {assignee_str}")
 
         print()
@@ -180,8 +182,8 @@ class Main(object):
         if self.assignme:
             args.append('--me')
 
-        if self.assign:
-            args.append(f"--assign {self.assign}")
+        if self.args.assign:
+            args.append(f"--assign {self.args.assign}")
 
         args.append(f"--output-file={TMPFILE}")
         args.extend(["-l " + x for x in self.upstream_labels])
@@ -277,7 +279,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-t', '--type',
                         default="bug", const="bug",
-                        choices=["bug", 'feature'], nargs="?",
+                        choices=["bug", 'feature', 'task'], nargs="?",
                         help='No upstream repo just openshiftio')
 
     parser.add_argument('--project-organisation', default=PROJECT_ORGANISATION,
