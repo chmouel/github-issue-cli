@@ -226,11 +226,11 @@ class Main(object):
 
     def add_issue_to_board(self, issue):
         args = []
-        args.append(f"-o={self.project_organisation}")
-        args.append(f"-b={self.project_name}")
-        args.append(f"-c={self.project_column}")
-        args.append(f"-i={issue}")
-        args.append("create")
+        args.append("add_card_to_column")
+        args.append(f"--project-location={self.project_organisation}")
+        args.append(f"--board={self.project_name}")
+        args.append(f"--column={self.project_column}")
+        args.append(f"--issuepr={issue}")
         return project.main(args)
 
     def main(self):

@@ -118,7 +118,7 @@ class Project(object):
         return (headers, data)
 
 
-def create(args, token, parser):
+def add_card_to_column(args, token, parser):
     if not all([args.project_location,
                 args.board, args.column, args.issuepr]):
         print("ERROR: Missing argument for create action.\n")
@@ -149,7 +149,7 @@ def create(args, token, parser):
              C.RED, project['html_url'], C.END))
 
 
-def move_all(args, token, parser):
+def move_cards_between_columns(args, token, parser):
     if not all([args.project_location, args.board,
                 args.destination_column, args.column]):
         print("I need a column and a"
@@ -195,35 +195,80 @@ def main(arguments):
             stdout=subprocess.PIPE
         ).communicate()[0].strip().decode()
 
-    if args.action == "create":
-        return create(args, token, parser)
-    elif args.action == "moveall":
-        return move_all(args, token, parser)
+    if args.action == "add_card_to_column":
+        return add_card_to_column(args, token, parser)
+    elif args.action == "move_cards_between_columns":
+        return move_cards_between_columns(args, token, parser)
+    else:
+        return parser.format_help()
 
 
 def parse_args(args):
     parser = argparse.ArgumentParser(description='GitHhub Project CLI.')
-    parser.add_argument('-o', '--project-location', type=str,
-                        help='Repo or Organisation where the board is located')
-    parser.add_argument('-b', '--board', type=str,
-                        help='Board by name')
-    parser.add_argument('-c', '--column', type=str,
-                        help='Column name')
 
-    parser.add_argument('-dc', '--destination-column', type=str,
-                        help='Destination column when moving')
+    mainparser = parser.add_subparsers(help='action to run', dest='action')
+    parser.add_argument(
+        "--token", type=str,
+        default=os.environ.get("GITHUB_TOKEN"),
+        help="GitHub Oauth Token. It will try the GITHUB_TOKEN"
+        " env or from `git config --get github.oauth-token`"
+    )
 
-    parser.add_argument('--card', type=str,
-                        help='Card name when moving.')
+    # ADD card to column
+    add_card_to_column = mainparser.add_parser(
+        'add_card_to_column',
+        help='Add card to a column')
 
-    parser.add_argument('-i', '--issuepr', type=str,
-                        help='Issue or PR to add')
+    add_card_to_column.add_argument(
+        '-p', '--project-location',
+        required=True,
+        type=str,
+        help='Repo or Organisation where the board is located')
 
-    parser.add_argument("--token", type=str,
-                        default=os.environ.get("GITHUB_TOKEN"),
-                        help="GitHub Oauth Token. It will try the GITHUB_TOKEN"
-                        " env or from `git config --get github.oauth-token`")
+    add_card_to_column.add_argument(
+        '-b', '--board', type=str,
+        required=True,
+        help='Board by name')
 
-    parser.add_argument("action", type=str, choices=["create", "moveall"])
+    add_card_to_column.add_argument(
+        '-c', '--column', type=str,
+        required=True,
+        help='Column name')
+
+    add_card_to_column.add_argument(
+        '--card', type=str,
+        required=True,
+        help='Card name when moving.')
+
+    add_card_to_column.add_argument(
+        '-i', '--issuepr', type=str,
+        required=True,
+        help='Issue or PR to add')
+
+    # Move card between columns
+    move_cards_between_columns = mainparser.add_parser(
+        'move_cards_between_columns',
+        help='Move all cards between columns')
+
+    move_cards_between_columns.add_argument(
+        '-dc', '--destination-column', type=str,
+        required=True,
+        help='Destination column when moving')
+
+    move_cards_between_columns.add_argument(
+        '-p', '--project-location',
+        required=True,
+        type=str,
+        help='Repo or Organisation where the board is located')
+
+    move_cards_between_columns.add_argument(
+        '-b', '--board', type=str,
+        required=True,
+        help='Board by name')
+
+    move_cards_between_columns.add_argument(
+        '-c', '--column', type=str,
+        required=True,
+        help='Column name')
 
     return parser
