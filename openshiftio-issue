@@ -193,7 +193,7 @@ class Main(object):
             args.append(f"--input-file={TMPFILE}")
         if self.assignme:
             args.append('--me')
-        args.extend(["-l " + x for x in self.upstream_labels])
+        args.extend(["-l " + x for x in self.downstream_labels])
 
         if not self.args.just_openshiftio:
             labelp = m.make_repo_pretty(os.path.basename(self.upstream_repo))
