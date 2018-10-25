@@ -236,11 +236,6 @@ def parse_args(args):
         help='Column name')
 
     add_card_to_column.add_argument(
-        '--card', type=str,
-        required=True,
-        help='Card name when moving.')
-
-    add_card_to_column.add_argument(
         '-i', '--issuepr', type=str,
         required=True,
         help='Issue or PR to add')
