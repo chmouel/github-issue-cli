@@ -271,7 +271,7 @@ class Main(object):
             issuepath = os.path.join(self.gitroot, "issues")
             if not os.path.exists(issuepath):
                 os.makedirs(issuepath)
-            issuefile = os.path.join(issuepath, githubbranch)
+            issuefile = os.path.join(issuepath, githubbranch.replace("issue-"))
             open(issuefile, 'w').write(ret)
             print(ret)
 
