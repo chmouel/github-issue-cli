@@ -25,19 +25,23 @@ DEFAULT_TEMPLATE = """{title}
 
 {body}
 
-# Everything starting with a # at the beginning of the line will be ignored.
-# -
-# Tags: commas delimited
-# -
-# Labels: {labels_flat}
-# Assignee: {assignee_flat}
-# -
-# Editors configs (you can ignore):
-# -
-# vim: ft=markdown
-# Local Variables:
-# mode: markdown
-# End:
+<!--
+Everything inside this comment block would be ignored!.
+=======================================================
+
+Tags: commas delimited
+
+Labels: {labels_flat}
+Assignee: {assignee_flat}
+Project: {args.repo}
+
+Editors configs (you can ignore):
+
+Local Variables:
+mode: markdown
+End:
+vim: ft=markdown
+-->
 """
 
 DEFAULT_BODY = "Insert body here."
@@ -83,33 +87,52 @@ def main(arguments):
             editor = os.environ['EDITOR']
         else:
             editor = 'vim'
-        subprocess.call([editor, TMPFILE], stdout=open(os.devnull, 'w'))
+        subprocess.call([editor, TMPFILE])
 
     blob = open(TMPFILE, 'r').readlines()
     if args.output_file:
         open(args.output_file, 'w').write("".join(blob))
 
+    incomment = False
+    newblob = []
     for x in blob:
-        if x.startswith("# Labels:"):
-            line = x.replace("# Labels:", "").strip()
+        if x.strip() == "<!--":
+            incomment = True
+            continue
+        elif x.strip() == "-->":
+            incomment = False
+            continue
+
+        if not incomment:
+            newblob.append(x.strip())
+            continue
+
+        if x.startswith("Labels:"):
+            line = x.replace("Labels:", "").strip()
             if line == '':
                 break
             sp = line.split(",")
             labels.extend(sp)
-        elif x.startswith("# Assignee:"):
-            line = x.replace("# Assignee:", "").strip()
+            continue
+        elif x.startswith("Assignee:"):
+            line = x.replace("Assignee:", "").strip()
             if line == '':
                 break
             assignee = line.split(",")
-    blob = [x.strip() for x in blob if not x.startswith("# ")]
-    if len(blob) == 0:
+            continue
+
+    if len(newblob) == 0:
         print("No title defined")
         sys.exit(1)
 
-    while not blob[-1] or blob[-1] == '':
-        del blob[-1]
-    title = blob[0]
-    body = "\n".join(blob[1:])
+    while not newblob[-1] or newblob[-1] == '':
+        del newblob[-1]
+    title = newblob[0]
+    if newblob[1].strip():
+        print("Template doesn't have a newline between title and body.. exit")
+        sys.exit(1)
+
+    body = "\n".join(newblob[2:])
 
     if args.token:
         token = args.token
