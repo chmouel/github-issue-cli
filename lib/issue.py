@@ -29,24 +29,23 @@ DEFAULT_TEMPLATE = """{title}
 Everything inside this comment block would be ignored!.
 =======================================================
 
-Tags: commas delimited
-
+# The label to tag this issue with, if the label doesn't exist it will be
+# silently ignored. Separate multiple label with a comma
 Labels: {labels_flat}
+
+# To who this is going to be assigned, one or multiple github users separated
+# by commas or the word 'me'
+#  which would then be expanded to your own github login
 Assignee: {assignee_flat}
+
+# Cannot be changed just for information
 Project: {args.repo}
-
-Editors configs (you can ignore):
-
-Local Variables:
-mode: markdown
-End:
-vim: ft=markdown
 -->
 """
 
 DEFAULT_BODY = "Insert body here."
 DEFAULT_TITLE = "Insert title here."
-TMPFILE = tempfile.mktemp("github-new-issue.py.XXXXXX")
+TMPFILE = tempfile.mkstemp(".md", "github-issue-cli-")[1]
 atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 
 
