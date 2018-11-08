@@ -180,6 +180,9 @@ def move_card(args, token, parser):
     for card in cards:
         _, cardDetail = g.get_card_column(card['id'])
 
+        if not cardDetail['note']:
+            continue
+
         if re.match(args.card_content_regexp, cardDetail['note']):
             chosen_cards.append(cardDetail)
 
