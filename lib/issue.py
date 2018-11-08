@@ -34,8 +34,8 @@ Everything inside this comment block would be ignored!.
 Labels: {labels_flat}
 
 # To who this is going to be assigned, one or multiple github users separated
-# by commas or the word 'me'
-#  which would then be expanded to your own github login
+# by commas or the word 'me' which would then be expanded to your own
+# github login
 Assignee: {assignee_flat}
 
 # Cannot be changed just for information
@@ -86,7 +86,9 @@ def main(arguments):
             editor = os.environ['EDITOR']
         else:
             editor = 'vim'
-        subprocess.call([editor, TMPFILE])
+        editor = editor.split(" ")
+        editor.append(TMPFILE)
+        subprocess.call([editor[0], *editor[1:]])
 
     blob = open(TMPFILE, 'r').readlines()
     if args.output_file:
@@ -210,7 +212,7 @@ def parse_args(args):
     parser.add_argument("--me", action="store_true",
                         help="Assign the issue to yourself.")
 
-    parser.add_argument("--editor", action="store_true",
+    parser.add_argument("--editor", type=str,
                         help="Editor to use default to $EDITOR or vim.")
 
     parser.add_argument("-n", "--noeditor", action="store_true",
