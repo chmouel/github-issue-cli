@@ -267,13 +267,14 @@ class Main(object):
             ret += f"This closes {self.downstream_repo}"
             ret += f"#{os.path.basename(downstream_issue)} "
             ret += f"and closes #{os.path.basename(upstream_issue)}\n"
+            print(ret)
 
             issuepath = os.path.join(self.gitroot, "issues")
             if not os.path.exists(issuepath):
                 os.makedirs(issuepath)
-            issuefile = os.path.join(issuepath, githubbranch.replace("issue-"))
+            issuefile = os.path.join(
+                issuepath, githubbranch.replace("issue-", ""))
             open(issuefile, 'w').write(ret)
-            print(ret)
 
 
 if __name__ == '__main__':

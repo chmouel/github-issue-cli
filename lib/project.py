@@ -20,6 +20,7 @@
 import argparse
 import github as gh
 import os
+import re
 import subprocess
 
 from lib.common import TerminalColors as C
@@ -91,6 +92,14 @@ class Project(object):
         )
         return(headers, data)
 
+    def get_card_column(self, card_id):
+        headers, data = self.client.requestJsonAndCheck(
+            "GET",
+            "/projects/columns/cards/" + str(card_id),
+            headers=self.headers,
+        )
+        return(headers, data)
+
     def move_card_to_column(self, card_id, dest_column_id):
         data = {
             'position': "top",
@@ -149,6 +158,44 @@ def add_card_to_column(args, token, parser):
              C.RED, project['html_url'], C.END))
 
 
+def move_card(args, token, parser):
+    g = Project(token)
+    project = g.get_project_by_desc(args.project_location,
+                                    args.board)
+    if not project:
+        raise Exception("Cannot find project board: %s in %s" %
+                        (args.board, args.project_location))
+
+    column_orig = g.get_cards_board_project(
+        project['id'], args.column)
+    assert(column_orig)
+
+    column_dest = g.get_cards_board_project(
+        project['id'], args.destination_column)
+    assert(column_dest)
+
+    chosen_cards = []
+    _, cards = g.list_card_column(column_orig['id'])
+    # expensive but we don't have much choice,
+    for card in cards:
+        _, cardDetail = g.get_card_column(card['id'])
+
+        if re.match(args.card_content_regexp, cardDetail['note']):
+            chosen_cards.append(cardDetail)
+
+    if len(chosen_cards) == 0:
+        print("Could not find your card")
+
+    for card in chosen_cards:
+        g.move_card_to_column(card['id'], column_dest['id'])
+
+    return ("We have moved %s\"%d\"%s cards from %s\"%s\"%s to %s\"%s\"%s" % (
+        C.YELLOW, len(chosen_cards), C.END,
+        C.GREEN, args.column, C.END,
+        C.BLUE, args.destination_column, C.END,
+    ))
+
+
 def move_cards_between_columns(args, token, parser):
     if not all([args.project_location, args.board,
                 args.destination_column, args.column]):
@@ -197,8 +244,10 @@ def main(arguments):
 
     if args.action == "add_card_to_column":
         return add_card_to_column(args, token, parser)
-    elif args.action == "move_cards_between_columns":
+    elif args.action == "move_all_cards_between_columns":
         return move_cards_between_columns(args, token, parser)
+    elif args.action == "move_card":
+        return move_card(args, token, parser)
     else:
         return parser.format_help()
 
@@ -242,7 +291,7 @@ def parse_args(args):
 
     # Move card between columns
     move_cards_between_columns = mainparser.add_parser(
-        'move_cards_between_columns',
+        'move_all_cards_between_columns',
         help='Move all cards between columns')
 
     move_cards_between_columns.add_argument(
@@ -265,5 +314,38 @@ def parse_args(args):
         '-c', '--column', type=str,
         required=True,
         help='Column name')
+
+    # Move card between columns
+    move_card = mainparser.add_parser(
+        'move_card',
+        help='Move a card between column')
+
+    move_card.add_argument(
+        '-dc', '--destination-column', type=str,
+        required=True,
+        help='Destination column when moving')
+
+    move_card.add_argument(
+        '-p', '--project-location',
+        required=True,
+        type=str,
+        help='Repo or Organisation where the board is located')
+
+    move_card.add_argument(
+        '-r', '--card-content-regexp',
+        required=True,
+        type=str,
+        help='Regexp to match the card')
+
+    move_card.add_argument(
+        '-b', '--board', type=str,
+        required=True,
+        help='Board by name')
+
+    move_card.add_argument(
+        '-c', '--column', type=str,
+        required=True,
+        help='Column name')
+
 
     return parser
