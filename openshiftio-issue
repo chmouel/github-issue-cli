@@ -10,6 +10,7 @@ import tempfile
 
 # may be avoided but life is so much better with colours
 from lib.common import TerminalColors as C
+from lib.common import execute
 import lib.issue as issue
 import lib.project as project
 
@@ -45,11 +46,6 @@ TMPFILE2 = tempfile.mktemp("openshiftio-issue.py-2")
 atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 atexit.register(lambda: os.path.exists(TMPFILE2) and os.remove(TMPFILE2))
 
-
-def execute(command):
-    return subprocess.run(
-        ['/bin/sh', '-c', f"{command}"],
-        stdout=subprocess.PIPE)
 
 
 class Main(object):
@@ -213,7 +209,7 @@ class Main(object):
                                        content[0]))
 
                 for line in content[1:]:
-                    if line.startswith("# Everything starting"):
+                    if line.startswith("<!-- Metadatas"):
                         new.append(f"{labelp} issue: {upstream_url}\n")
                     if line.startswith("# Labels: "):  # we use our own
                         continue

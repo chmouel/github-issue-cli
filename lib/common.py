@@ -12,7 +12,13 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import subprocess
 
+
+def execute(command):
+    return subprocess.run(
+        ['/bin/sh', '-c', f"{command}"],
+        stdout=subprocess.PIPE)
 
 class TerminalColors:
     BLUE = '\033[94m'

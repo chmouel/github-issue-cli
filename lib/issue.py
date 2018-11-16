@@ -25,7 +25,7 @@ DEFAULT_TEMPLATE = """{title}
 
 {body}
 
-<!--
+<!-- Metadatas
 Everything inside this comment block would be ignored!.
 =======================================================
 
@@ -97,7 +97,7 @@ def main(arguments):
     incomment = False
     newblob = []
     for x in blob:
-        if x.strip() == "<!--":
+        if x.strip() == "<!-- Metadatas":
             incomment = True
             continue
         elif x.strip() == "-->":
