@@ -102,7 +102,7 @@ class Main(object):
         if args.type == "bug" and self.downstream_repo == DOWNSTREAM_REPO:
             self.downstream_labels.append("type/bug")
             self.downstream_labels.append(SEVERITY_MAP[args.priority])
-            self.downstream_labels.append(f"priority/p{args.priority}")
+            self.downstream_labels.append(f"priority/P{args.priority}")
         elif args.type == "feature":
             self.downstream_labels.append("type/user-story")
         elif args.type == "task":
