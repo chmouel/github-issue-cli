@@ -20,7 +20,9 @@ import os
 import sys
 import subprocess
 import tempfile
+import re
 
+EMOJI_RE = re.compile('[\U00010000-\U0010ffff]', flags=re.UNICODE)
 DEFAULT_TEMPLATE = """{title}
 
 {body}
@@ -161,8 +163,9 @@ def main(arguments):
     good_labels = []
     for x in labels:
         for l in repo_labels:
-            if x == l.name:
-                good_labels.append(x)
+            if x == EMOJI_RE.sub(r'', l.name):
+                if l.name not in good_labels:
+                    good_labels.append(l.name)
 
     issue = repo.create_issue(
         title=title,
