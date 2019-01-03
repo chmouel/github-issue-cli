@@ -4,7 +4,6 @@ import atexit
 import os
 import re
 import string
-import subprocess
 import sys
 import tempfile
 
@@ -12,11 +11,11 @@ import tempfile
 from lib.common import TerminalColors as C
 from lib.common import execute
 import lib.issue as issue
-import lib.project as project
+import lib.zenhub as zenhub
 
 PROJECT_ORGANISATION = "fabric8io"
 PROJECT_NAME = "Build Team"
-PROJECT_COLUMN = "Backlog"
+PROJECT_COLUMN = "New Issues"
 DOWNSTREAM_REPO = "openshiftio/openshift.io"
 
 REPO_CONFIG = {
@@ -45,7 +44,6 @@ TMPFILE = tempfile.mktemp("openshiftio-issue.py-1")
 TMPFILE2 = tempfile.mktemp("openshiftio-issue.py-2")
 atexit.register(lambda: os.path.exists(TMPFILE) and os.remove(TMPFILE))
 atexit.register(lambda: os.path.exists(TMPFILE2) and os.remove(TMPFILE2))
-
 
 
 class Main(object):
@@ -77,8 +75,9 @@ class Main(object):
 
         if args.repo:
             self.upstream_repo = args.repo
-            gopath_githubrepo = os.path.join(os.path.expandvars(
-                f"$GOPATH/src.github.com/{args.repo}"), ".git")
+            gopath_githubrepo = os.path.join(
+                os.path.expandvars(f"$GOPATH/src.github.com/{args.repo}"),
+                ".git")
             if os.path.exists(gopath_githubrepo):
                 self.gitroot = gopath_githubrepo
             else:
@@ -88,9 +87,8 @@ class Main(object):
             if not self.upstream_repo:
                 raise Exception("no repo detected")
             self.gitroot = os.path.join(
-                execute(
-                    "git rev-parse --show-toplevel").stdout.strip().decode(),
-                ".git")
+                execute("git rev-parse --show-toplevel").stdout.strip().
+                decode(), ".git")
 
         if self.in_progress:
             self.project_column = "In Progress"
@@ -122,15 +120,12 @@ class Main(object):
             self.downstream_labels)))
         if not self.args.just_openshiftio:
             print(f"{C.BLUE}Upstream{C.END}: %s" % (self.upstream_repo))
-            print(f"{C.BLUE}Upstream Labels{C.END}: %s" % (
-                ", ".join(self.upstream_labels)))
+            print(f"{C.BLUE}Upstream Labels{C.END}: %s" % (", ".join(
+                self.upstream_labels)))
         if self.project_organisation != PROJECT_ORGANISATION:
-            print(f"{C.BLUE}Project Repo{C.END}: %s" % (
-                self.project_organisation))
-        print(f"{C.BLUE}Project Name{C.END}: %s" % (
-            self.project_name))
-        print(f"{C.BLUE}Project Column{C.END}: %s" %
-              (self.project_column))
+            print(f"{C.BLUE}Project Repo{C.END}: %s" %
+                  (self.project_organisation))
+        print(f"{C.BLUE}ZenHUB Pipeline{C.END}: %s" % (self.project_column))
         assignee_str = ""
         if self.assignme:
             assignee_str += "Yourself"
@@ -149,7 +144,7 @@ class Main(object):
 
         try:
             guess = input('Is it okay for you? [yN]: ')
-        except(KeyboardInterrupt):
+        except (KeyboardInterrupt):
             print()
             guess = None
 
@@ -205,8 +200,8 @@ class Main(object):
                 content = x.readlines()
                 self._title = content[0]
                 new = []
-                new.append("%s: %s" % (labelp.replace("Fabric8 ", ""),
-                                       content[0]))
+                new.append(
+                    "%s: %s" % (labelp.replace("Fabric8 ", ""), content[0]))
 
                 for line in content[1:]:
                     if line.startswith("<!-- Metadatas"):
@@ -223,13 +218,20 @@ class Main(object):
         return issue.main(args)
 
     def add_issue_to_board(self, issue):
-        args = []
-        args.append("add_card_to_column")
-        args.append(f"--project-location={self.project_organisation}")
-        args.append(f"--board={self.project_name}")
-        args.append(f"--column={self.project_column}")
-        args.append(f"--issuepr={issue}")
-        return project.main(args)
+        zhub = zenhub.ZHub()
+        i = issue.replace("https://github.com/", "").replace("/issues", "")
+        sp = i.split("/")
+
+        repo_name = "/".join(sp[0:2])
+        issue_id = int(sp[-1])
+
+        repo_id = zhub.github_get_repo_id(repo_name)
+        pipelines = zhub.board_data_for_repo(repo_id)
+        zhub.move_issue_to_pipeline(
+            repo_id,
+            issue_id,
+            pipelines[self.project_column],
+        )
 
     def main(self):
         upstream_issue = None
@@ -238,14 +240,12 @@ class Main(object):
         if not self.args.just_openshiftio:
             upstream_issue = self.create_issue_upstream()
         downstream_issue = self.create_issue_downstream(upstream_issue)
-        project_created = self.add_issue_to_board(downstream_issue)
+        # TODO: In just openshfitio
+        project_created = self.add_issue_to_board(upstream_issue)
 
-        print()
         if not self.args.just_openshiftio:
-            print(f"{C.BLUE}Upstream issue{C.END}: %s" %
-                  upstream_issue)
-        print(f"{C.BLUE}Downstream issue{C.END}: %s"
-              % downstream_issue)
+            print(f"{C.BLUE}Upstream issue{C.END}: %s" % upstream_issue)
+        print(f"{C.BLUE}Downstream issue{C.END}: %s" % downstream_issue)
         print()
         print(f"{project_created}")
 
@@ -253,9 +253,8 @@ class Main(object):
             print(f"\n{C.GREEN}Helpers:{C.END}\n")
             githubbranch = "issue-%s" % (os.path.basename(upstream_issue))
             if self._title:
-                githubbranch += "-%s" % (
-                    self.make_branche_name_out_title(self._title)
-                )
+                githubbranch += "-%s" % (self.make_branche_name_out_title(
+                    self._title))
 
             ret = f"Upstream: {upstream_issue}\n"
             ret += f"Downstream: {downstream_issue}\n\n"
@@ -268,8 +267,9 @@ class Main(object):
             issuepath = os.path.join(self.gitroot, "issues")
             if not os.path.exists(issuepath):
                 os.makedirs(issuepath)
-            issuefile = os.path.join(
-                issuepath, githubbranch.replace("issue-", "")).strip()
+            issuefile = os.path.join(issuepath,
+                                     githubbranch.replace("issue-",
+                                                          "")).strip()
             open(issuefile, 'w').write(ret)
 
 
@@ -278,47 +278,69 @@ if __name__ == '__main__':
         description='Create an OpenShiftIO issue.')
     parser.add_argument('--test', action='store_true', help='Test mode')
 
-    parser.add_argument('-j', '--just-openshiftio', action='store_true',
-                        help='No upstream repo just openshiftio')
+    parser.add_argument(
+        '-j',
+        '--just-openshiftio',
+        action='store_true',
+        help='No upstream repo just openshiftio')
 
-    parser.add_argument('-t', '--type',
-                        default="bug", const="bug",
-                        choices=["bug", 'feature', 'task'], nargs="?",
-                        help='No upstream repo just openshiftio')
+    parser.add_argument(
+        '-t',
+        '--type',
+        default="bug",
+        const="bug",
+        choices=["bug", 'feature', 'task'],
+        nargs="?",
+        help='No upstream repo just openshiftio')
 
-    parser.add_argument('--project-organisation', default=PROJECT_ORGANISATION,
-                        type=str,
-                        help="Organisation where is the project located.")
+    parser.add_argument(
+        '--project-organisation',
+        default=PROJECT_ORGANISATION,
+        type=str,
+        help="Organisation where is the project located.")
 
-    parser.add_argument('--project-name', default=PROJECT_NAME,
-                        type=str,
-                        help="The name of the project backlog.")
+    parser.add_argument(
+        '--project-name',
+        default=PROJECT_NAME,
+        type=str,
+        help="The name of the project backlog.")
 
-    parser.add_argument('--project-column',
-                        default=PROJECT_COLUMN,
-                        type=str,
-                        help="The name of the column in the project backlog.")
+    parser.add_argument(
+        '--project-column',
+        default=PROJECT_COLUMN,
+        type=str,
+        help="The name of the column in the project backlog.")
 
-    parser.add_argument('-p', '--priority',
-                        default=4,
-                        type=int,
-                        help="Issue priority.")
+    parser.add_argument(
+        '-p', '--priority', default=4, type=int, help="Issue priority.")
 
-    parser.add_argument('-m', '--assignme', action='store_true',
-                        help='Assign to me')
+    parser.add_argument(
+        '-m', '--assignme', action='store_true', help='Assign to me')
 
-    parser.add_argument('--assign', type=str, action='append', nargs="?",
-                        help='Assign to this user')
+    parser.add_argument(
+        '--assign',
+        type=str,
+        action='append',
+        nargs="?",
+        help='Assign to this user')
 
-    parser.add_argument('-i', '--in-progress', action='store_true',
-                        help='Set as working on it')
+    parser.add_argument(
+        '-i',
+        '--in-progress',
+        action='store_true',
+        help='Set as working on it')
 
-    parser.add_argument('--no-interactive', action='store_true',
-                        help="Set it if you don't want to be interactive")
+    parser.add_argument(
+        '--no-interactive',
+        action='store_true',
+        help="Set it if you don't want to be interactive")
 
-    parser.add_argument('repo', type=str, nargs="?",
-                        metavar="DOWNSTREAM_REPO",
-                        help='Set as working on it')
+    parser.add_argument(
+        'repo',
+        type=str,
+        nargs="?",
+        metavar="DOWNSTREAM_REPO",
+        help='Set as working on it')
 
     args = parser.parse_args()
     m = Main(args)
