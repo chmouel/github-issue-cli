@@ -131,7 +131,8 @@ def main(arguments):
     while not newblob[-1] or newblob[-1] == '':
         del newblob[-1]
     title = newblob[0]
-    if newblob[1].strip():
+
+    if len(newblob) > 1 and newblob[1].strip():
         print("Template doesn't have a newline between title and body.. exit")
         sys.exit(1)
 
