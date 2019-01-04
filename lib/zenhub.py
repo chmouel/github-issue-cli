@@ -20,6 +20,10 @@ import os
 ZHUB_URL = 'https://api.zenhub.io'
 
 
+class NoTokenFound(Exception):
+    pass
+
+
 def get_a_token(env, gitgetkey):
     if os.environ.get(env):
         return os.environ.get(env)
@@ -30,7 +34,7 @@ def get_a_token(env, gitgetkey):
     if _token:
         return _token
     else:
-        raise Exception(
+        raise NoTokenFound(
             f"Cannot find a token in env {env} or git config key {gitgetkey} ")
 
 
@@ -40,18 +44,19 @@ class ZHub(object):
     github_repos_id = {}
     zenhub_board_info = {}
 
-    def __init__(self, token=None, github_token=None):
+    def __init__(self, zenhub_token=None, github_token=None):
         self.github_token = github_token
-        self.token = token
+        self.zenhub_token = zenhub_token
 
         if not self.github_token:
             self.github_token = get_a_token("GITHUB_TOKEN",
                                             "github.oauth-token")
-        if not self.token:
-            self.token = get_a_token("ZENHUB_TOKEN", "zenhub.oauth-token")
+        if not self.zenhub_token:
+            self.zenhub_token = get_a_token("ZENHUB_TOKEN",
+                                            "zenhub.oauth-token")
 
     def _request(self, method, url, data=None):
-        headers = {'X-Authentication-Token': self.token}
+        headers = {'X-Authentication-Token': self.zenhub_token}
         r = requests.request(
             method, ZHUB_URL + url, data=data, headers=headers)
         r.raise_for_status()

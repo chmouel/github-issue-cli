@@ -181,6 +181,9 @@ class Main(object):
         if self.args.assign:
             args.append(f"--assign {self.args.assign}")
 
+        if self.args.github_token:
+            args.append(f"--token={self.args.github_token}")
+
         args.append(f"--output-file={TMPFILE}")
         args.extend(["-l " + x for x in self.upstream_labels])
         args.append(self.upstream_repo)
@@ -218,7 +221,15 @@ class Main(object):
         return issue.main(args)
 
     def add_issue_to_board(self, issue):
-        zhub = zenhub.ZHub()
+        try:
+            zhub = zenhub.ZHub(
+                zenhub_token=self.args.zenhub_token,
+                github_token=self.args.github_token,
+            )
+        except zenhub.NoTokenFound as e:
+            print(f"Skipping adding issue to board: {str(e)}")
+            return
+
         i = issue.replace("https://github.com/", "").replace("/issues", "")
         sp = i.split("/")
 
@@ -277,6 +288,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create an OpenShiftIO issue.')
     parser.add_argument('--test', action='store_true', help='Test mode')
+
+    parser.add_argument(
+        '--github-token',
+        type=str,
+        default=os.environ.get("GITHUB_TOKEN"),
+        help='Github TOKEN')
+
+    parser.add_argument(
+        '--zenhub-token',
+        type=str,
+        default=os.environ.get("ZENHUB_TOKEN"),
+        help='ZENHUB TOKEN')
 
     parser.add_argument(
         '-j',
