@@ -35,6 +35,8 @@ def get_a_token(env, gitgetkey):
 
 
 class ZHub(object):
+    # We store most of the stuff, even if not used, perhaps one day we can
+    # pickle this
     github_repos_id = {}
     zenhub_board_info = {}
 
