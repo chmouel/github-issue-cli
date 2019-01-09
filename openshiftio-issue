@@ -243,6 +243,9 @@ class Main(object):
             issue_id,
             pipelines[self.project_column],
         )
+        return ("Issue has been added to Zenboard in "
+                "%s\"%s\"%s pipeline"
+                "" % (C.GREEN, args.project_column, C.END))
 
     def main(self):
         upstream_issue = None
