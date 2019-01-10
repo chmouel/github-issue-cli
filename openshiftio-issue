@@ -11,11 +11,11 @@ import tempfile
 from lib.common import TerminalColors as C
 from lib.common import execute
 import lib.issue as issue
-import lib.zenhub as zenhub
+import lib.project as project
 
 PROJECT_ORGANISATION = "fabric8io"
 PROJECT_NAME = "Build Team"
-PROJECT_COLUMN = "New Issues"
+PROJECT_COLUMN = "Backlog"
 DOWNSTREAM_REPO = "openshiftio/openshift.io"
 
 REPO_CONFIG = {
@@ -125,7 +125,10 @@ class Main(object):
         if self.project_organisation != PROJECT_ORGANISATION:
             print(f"{C.BLUE}Project Repo{C.END}: %s" %
                   (self.project_organisation))
-        print(f"{C.BLUE}ZenHUB Pipeline{C.END}: %s" % (self.project_column))
+
+        print(f"{C.BLUE}Project Name{C.END}: %s" % (self.project_name))
+        print(f"{C.BLUE}Project Column{C.END}: %s" % (self.project_column))
+
         assignee_str = ""
         if self.assignme:
             assignee_str += "Yourself"
@@ -221,31 +224,13 @@ class Main(object):
         return issue.main(args)
 
     def add_issue_to_board(self, issue):
-        try:
-            zhub = zenhub.ZHub(
-                zenhub_token=self.args.zenhub_token,
-                github_token=self.args.github_token,
-            )
-        except zenhub.NoTokenFound as e:
-            print(f"Skipping adding issue to board: {str(e)}")
-            return
-
-        i = issue.replace("https://github.com/", "").replace("/issues", "")
-        sp = i.split("/")
-
-        repo_name = "/".join(sp[0:2])
-        issue_id = int(sp[-1])
-
-        repo_id = zhub.github_get_repo_id(repo_name)
-        pipelines = zhub.board_data_for_repo(repo_id)
-        zhub.move_issue_to_pipeline(
-            repo_id,
-            issue_id,
-            pipelines[self.project_column],
-        )
-        return ("Issue has been added to Zenboard in "
-                "%s\"%s\"%s pipeline"
-                "" % (C.GREEN, args.project_column, C.END))
+        args = []
+        args.append("add_card_to_column")
+        args.append(f"--project-location={self.project_organisation}")
+        args.append(f"--board={self.project_name}")
+        args.append(f"--column={self.project_column}")
+        args.append(f"--issuepr={issue}")
+        return project.main(args)
 
     def main(self):
         upstream_issue = None
